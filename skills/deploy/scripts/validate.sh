@@ -60,10 +60,16 @@ if [ -f main/mimi_secrets.h ]; then
         pass "WiFi SSID configured"
     fi
 
-    if grep -q 'MIMI_SECRET_TG_TOKEN.*""' main/mimi_secrets.h; then
-        fail "Telegram token is empty"
+    if grep -q 'MIMI_SECRET_FEISHU_APP_ID.*""' main/mimi_secrets.h; then
+        fail "Feishu app ID is empty"
     else
-        pass "Telegram token configured"
+        pass "Feishu app ID configured"
+    fi
+
+    if grep -q 'MIMI_SECRET_FEISHU_APP_SECRET.*""' main/mimi_secrets.h; then
+        fail "Feishu app secret is empty"
+    else
+        pass "Feishu app secret configured"
     fi
 
     if grep -q 'MIMI_SECRET_API_KEY.*""' main/mimi_secrets.h; then

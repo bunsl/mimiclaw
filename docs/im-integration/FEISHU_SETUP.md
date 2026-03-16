@@ -19,7 +19,7 @@ This guide walks through setting up a Feishu (or Lark) bot to work with MimiClaw
 
 ## Overview
 
-MimiClaw supports Feishu as a messaging channel alongside Telegram and WebSocket. The Feishu integration uses:
+MimiClaw supports Feishu as a messaging channel alongside WebSocket. The Feishu integration uses:
 
 - **Webhook receiver** — the ESP32 runs an HTTP server on port 18790 to receive messages from Feishu
 - **Send API** — MimiClaw sends replies via Feishu's REST API (`/im/v1/messages`)

@@ -23,7 +23,7 @@ End-to-end guide for deploying MimiClaw to an ESP32-S3 dev board.
 
 ### Credentials (get these first)
 - **WiFi SSID + password** — the network the ESP32 will connect to
-- **Telegram Bot Token** — create via [@BotFather](https://t.me/BotFather) on Telegram
+- **Feishu App ID + App Secret** — create in [Feishu Open Platform](https://open.feishu.cn/)
 - **Anthropic API Key** — from [console.anthropic.com](https://console.anthropic.com)
 - *(Optional)* Brave Search API key — from [brave.com/search/api](https://brave.com/search/api/)
 - *(Optional)* HTTP proxy host:port — if in China or restricted network
@@ -47,7 +47,8 @@ Edit `main/mimi_secrets.h` — fill in ALL required fields:
 ```c
 #define MIMI_SECRET_WIFI_SSID       "YourWiFiName"        // REQUIRED
 #define MIMI_SECRET_WIFI_PASS       "YourWiFiPassword"     // REQUIRED
-#define MIMI_SECRET_TG_TOKEN        "123456:ABC-DEF..."    // REQUIRED
+#define MIMI_SECRET_FEISHU_APP_ID   "cli_xxxxxxxxxxxxxx"   // REQUIRED
+#define MIMI_SECRET_FEISHU_APP_SECRET "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" // REQUIRED
 #define MIMI_SECRET_API_KEY         "sk-ant-api03-..."     // REQUIRED
 #define MIMI_SECRET_MODEL           ""                     // optional, defaults to claude-opus-4-5
 #define MIMI_SECRET_SEARCH_KEY      ""                     // optional: Brave Search API key
@@ -56,7 +57,7 @@ Edit `main/mimi_secrets.h` — fill in ALL required fields:
 ```
 
 **Proxy setup (China users):**
-If you need a proxy to reach Telegram/Anthropic APIs, set both `PROXY_HOST` and `PROXY_PORT`. The proxy machine must:
+If you need a proxy to reach Feishu/Anthropic APIs, set both `PROXY_HOST` and `PROXY_PORT`. The proxy machine must:
 - Be on the same LAN as the ESP32
 - Support HTTP CONNECT method (Clash, V2Ray, etc.)
 - Have "Allow LAN connections" enabled
@@ -115,7 +116,7 @@ The monitor shows boot logs. Look for:
 I (xxx) mimi: MimiClaw - ESP32-S3 AI Agent
 I (xxx) mimi: PSRAM free: ~8000000 bytes
 I (xxx) wifi: WiFi connected: 192.168.x.x
-I (xxx) telegram: Telegram bot token loaded
+I (xxx) feishu: Feishu app credentials loaded
 I (xxx) mimi: All services started!
 ```
 
@@ -123,7 +124,7 @@ I (xxx) mimi: All services started!
 
 ## Step 6: Verify
 
-1. Open Telegram, find your bot (the one you created with BotFather)
+1. Open Feishu, find your bot app
 2. Send: `Hello`
 3. You should see "mimi is working..." followed by a response
 4. Send: `What time is it?` — tests the get_current_time tool
@@ -136,7 +137,7 @@ Connect via serial (`idf.py -p PORT monitor`) and use CLI commands:
 ```
 mimi> config_show                  # see current config
 mimi> wifi_set NewSSID NewPass     # change WiFi
-mimi> set_tg_token 123456:ABC...   # change Telegram token
+mimi> set_feishu_creds cli_xxx secret_xxx  # change Feishu credentials
 mimi> set_api_key sk-ant-...       # change API key
 mimi> set_model claude-sonnet-4-5  # change model
 mimi> set_proxy 192.168.1.83 7897  # set proxy
@@ -156,7 +157,7 @@ After initial USB flash, future updates can be done over WiFi:
    ```bash
    cd build && python3 -m http.server 8080
    ```
-3. Send to your bot on Telegram or use the OTA CLI command with the URL:
+3. Send to your bot on Feishu or use the OTA CLI command with the URL:
    ```
    http://YOUR_PC_IP:8080/mimiclaw.bin
    ```
@@ -177,7 +178,7 @@ After initial USB flash, future updates can be done over WiFi:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | No WiFi connection | Wrong SSID/password | Check `mimi_secrets.h`, `idf.py fullclean && build && flash` |
-| "No bot token" | Empty TG token | Set via `mimi_secrets.h` or CLI `set_tg_token` |
+| "No bot credentials" | Empty Feishu app ID/secret | Set via `mimi_secrets.h` or CLI `set_feishu_creds` |
 | Bot doesn't respond | API key invalid | Check key at console.anthropic.com, set via CLI |
 | "Markdown send failed" | Normal with Markdown mode | Non-critical, falls back to plain text |
 | Proxy timeout | Proxy not reachable | Ensure same LAN, proxy allows LAN connections |

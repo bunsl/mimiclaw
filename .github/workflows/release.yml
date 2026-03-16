@@ -80,7 +80,7 @@ jobs:
 
             ```
             wifi <ssid> <password>
-            tg_token <your-telegram-bot-token>
+            set_feishu_creds <your-feishu-app-id> <your-feishu-app-secret>
             api_key <your-anthropic-api-key>
             reboot
             ```

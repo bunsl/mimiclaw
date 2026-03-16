@@ -13,9 +13,6 @@
 #ifndef MIMI_SECRET_WIFI_PASS
 #define MIMI_SECRET_WIFI_PASS       ""
 #endif
-#ifndef MIMI_SECRET_TG_TOKEN
-#define MIMI_SECRET_TG_TOKEN        ""
-#endif
 #ifndef MIMI_SECRET_API_KEY
 #define MIMI_SECRET_API_KEY         ""
 #endif
@@ -52,15 +49,6 @@
 #define MIMI_WIFI_RETRY_BASE_MS      1000
 #define MIMI_WIFI_RETRY_MAX_MS       30000
 
-/* Telegram Bot */
-#define MIMI_TG_POLL_TIMEOUT_S       30
-#define MIMI_TG_MAX_MSG_LEN          4096
-#define MIMI_TG_POLL_STACK           (12 * 1024)
-#define MIMI_TG_POLL_PRIO            5
-#define MIMI_TG_POLL_CORE            0
-#define MIMI_TG_CARD_SHOW_MS         3000
-#define MIMI_TG_CARD_BODY_SCALE      3
-
 /* Feishu Bot */
 #define MIMI_FEISHU_MAX_MSG_LEN          4096
 #define MIMI_FEISHU_POLL_STACK           (12 * 1024)
@@ -88,6 +76,7 @@
 #define MIMI_LLM_MAX_TOKENS          4096
 #define MIMI_LLM_API_URL             "https://api.anthropic.com/v1/messages"
 #define MIMI_OPENAI_API_URL          "https://api.openai.com/v1/chat/completions"
+#define MIMI_MINIMAX_API_URL         "https://api.minimaxi.com/v1/chat/completions"
 #define MIMI_LLM_API_VERSION         "2023-06-01"
 #define MIMI_LLM_STREAM_BUF_SIZE     (32 * 1024)
 #define MIMI_LLM_LOG_VERBOSE_PAYLOAD 0
@@ -134,7 +123,6 @@
 
 /* NVS Namespaces */
 #define MIMI_NVS_WIFI                "wifi_config"
-#define MIMI_NVS_TG                  "tg_config"
 #define MIMI_NVS_FEISHU              "feishu_config"
 #define MIMI_NVS_LLM                 "llm_config"
 #define MIMI_NVS_PROXY               "proxy_config"
@@ -143,7 +131,6 @@
 /* NVS Keys */
 #define MIMI_NVS_KEY_SSID            "ssid"
 #define MIMI_NVS_KEY_PASS            "password"
-#define MIMI_NVS_KEY_TG_TOKEN        "bot_token"
 #define MIMI_NVS_KEY_FEISHU_APP_ID   "app_id"
 #define MIMI_NVS_KEY_FEISHU_APP_SECRET "app_secret"
 #define MIMI_NVS_KEY_API_KEY         "api_key"

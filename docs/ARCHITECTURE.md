@@ -7,7 +7,7 @@
 ## System Overview
 
 ```
-Telegram App (User)
+Feishu App (User)
     │
     │  HTTPS Long Polling
     │
@@ -16,7 +16,7 @@ Telegram App (User)
 │               ESP32-S3 (MimiClaw)                │
 │                                                  │
 │   ┌─────────────┐       ┌──────────────────┐     │
-│   │  Telegram    │──────▶│   Inbound Queue  │     │
+│   │  Feishu    │──────▶│   Inbound Queue  │     │
 │   │  Poller      │       └────────┬─────────┘     │
 │   │  (Core 0)    │               │                │
 │   └─────────────┘               ▼                │
@@ -43,14 +43,14 @@ Telegram App (User)
 │                         │  (Core 0)    │          │
 │                         └──┬────────┬──┘          │
 │                            │        │             │
-│                     Telegram    WebSocket          │
+│                     Feishu    WebSocket          │
 │                     sendMessage  send              │
 │                                                   │
 │   ┌──────────────────────────────────────────┐    │
 │   │  SPIFFS (12 MB)                          │    │
 │   │  /spiffs/config/  SOUL.md, USER.md       │    │
 │   │  /spiffs/memory/  MEMORY.md, YYYY-MM-DD  │    │
-│   │  /spiffs/sessions/ tg_<chat_id>.jsonl    │    │
+│   │  /spiffs/sessions/ chat_<chat_id>.jsonl    │    │
 │   └──────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────┘
          │
@@ -67,7 +67,7 @@ Telegram App (User)
 ## Data Flow
 
 ```
-1. User sends message on Telegram (or WebSocket)
+1. User sends message on Feishu (or WebSocket)
 2. Channel poller receives message, wraps in mimi_msg_t
 3. Message pushed to Inbound Queue (FreeRTOS xQueue)
 4. Agent Loop (Core 1) pops message:
@@ -85,7 +85,7 @@ Telegram App (User)
    e. Save user message + final assistant text to session file
    f. Push response to Outbound Queue
 5. Outbound Dispatch (Core 0) pops response:
-   a. Route by channel field ("telegram" → sendMessage, "websocket" → WS frame)
+   a. Route by channel field ("feishu" → sendMessage, "websocket" → WS frame)
 6. User receives reply
 ```
 
@@ -108,9 +108,9 @@ main/
 │   ├── wifi_manager.h      WiFi STA lifecycle API
 │   └── wifi_manager.c      Event handler, exponential backoff
 │
-├── telegram/
-│   ├── telegram_bot.h      Bot init/start, send_message API
-│   └── telegram_bot.c      Long polling loop, JSON parsing, message splitting
+├── Feishu/
+│   ├── feishu_bot.h      Bot init/start, send_message API
+│   └── feishu_bot.c      Long polling loop, JSON parsing, message splitting
 │
 ├── llm/
 │   ├── llm_proxy.h         llm_chat() + llm_chat_tools() API, tool_use types
@@ -157,9 +157,9 @@ main/
 
 | Task               | Core | Priority | Stack  | Description                          |
 |--------------------|------|----------|--------|--------------------------------------|
-| `tg_poll`          | 0    | 5        | 12 KB  | Telegram long polling (30s timeout)  |
+| `feishu_poll`          | 0    | 5        | 12 KB  | Feishu long polling (30s timeout)  |
 | `agent_loop`       | 1    | 6        | 12 KB  | Message processing + Claude API call |
-| `outbound`         | 0    | 5        | 8 KB   | Route responses to Telegram / WS     |
+| `outbound`         | 0    | 5        | 8 KB   | Route responses to Feishu / WS     |
 | `serial_cli`       | 0    | 3        | 4 KB   | USB serial console REPL              |
 | httpd (internal)   | 0    | 5        | —      | WebSocket server (esp_http_server)   |
 | wifi_event (IDF)   | 0    | 8        | —      | WiFi event handling (ESP-IDF)        |
@@ -174,7 +174,7 @@ main/
 |------------------------------------|----------------|----------|
 | FreeRTOS task stacks               | Internal SRAM  | ~40 KB   |
 | WiFi buffers                       | Internal SRAM  | ~30 KB   |
-| TLS connections x2 (Telegram + Claude) | PSRAM      | ~120 KB  |
+| TLS connections x2 (Feishu + Claude) | PSRAM      | ~120 KB  |
 | JSON parse buffers                 | PSRAM          | ~32 KB   |
 | Session history cache              | PSRAM          | ~32 KB   |
 | System prompt buffer               | PSRAM          | ~16 KB   |
@@ -212,7 +212,7 @@ SPIFFS is a flat filesystem — no real directories. Files use path-like names.
 /spiffs/config/USER.md          User profile
 /spiffs/memory/MEMORY.md        Long-term persistent memory
 /spiffs/memory/2026-02-05.md    Daily notes (one file per day)
-/spiffs/sessions/tg_12345.jsonl Session history (one file per Telegram chat)
+/spiffs/sessions/chat_12345.jsonl Session history (one file per Feishu chat)
 ```
 
 Session files are JSONL (one JSON object per line):
@@ -231,7 +231,8 @@ All configuration is done exclusively through `mimi_secrets.h` at build time. Th
 |------------------------------|-----------------------------------------|
 | `MIMI_SECRET_WIFI_SSID`     | WiFi SSID                               |
 | `MIMI_SECRET_WIFI_PASS`     | WiFi password                           |
-| `MIMI_SECRET_TG_TOKEN`      | Telegram Bot API token                  |
+| `MIMI_SECRET_FEISHU_APP_ID`      | Feishu app ID                         |
+| `MIMI_SECRET_FEISHU_APP_SECRET`  | Feishu app secret                     |
 | `MIMI_SECRET_API_KEY`       | Anthropic API key                       |
 | `MIMI_SECRET_MODEL`         | Model ID (default: claude-opus-4-6)     |
 | `MIMI_SECRET_PROXY_HOST`    | HTTP proxy hostname/IP (optional)       |
@@ -248,8 +249,8 @@ The internal message bus uses two FreeRTOS queues carrying `mimi_msg_t`:
 
 ```c
 typedef struct {
-    char channel[16];   // "telegram", "websocket", "cli"
-    char chat_id[32];   // Telegram chat ID or WS client ID
+    char channel[16];   // "feishu", "websocket", "cli"
+    char chat_id[32];   // Feishu chat ID or WS client ID
     char *content;      // Heap-allocated text (ownership transferred)
 } mimi_msg_t;
 ```
@@ -341,7 +342,7 @@ app_main()
   ├── session_mgr_init()
   ├── wifi_manager_init()           Init WiFi STA mode + event handlers
   ├── http_proxy_init()             Load proxy config from build-time secrets
-  ├── telegram_bot_init()           Load bot token from build-time secrets
+  ├── feishu_bot_init()           Load app credentials from build-time secrets
   ├── llm_proxy_init()              Load API key + model from build-time secrets
   ├── tool_registry_init()          Register tools, build tools JSON
   ├── agent_loop_init()
@@ -351,7 +352,7 @@ app_main()
   │   └── wifi_manager_wait_connected(30s)
   │
   └── [if WiFi connected]
-      ├── telegram_bot_start()      Launch tg_poll task (Core 0)
+      ├── feishu_bot_start()      Launch feishu_poll task (Core 0)
       ├── agent_loop_start()        Launch agent_loop task (Core 1)
       ├── ws_server_start()         Start httpd on port 18789
       └── outbound_dispatch task    Launch outbound task (Core 0)
@@ -386,7 +387,7 @@ The CLI provides debug and maintenance commands only. All configuration is done 
 | `agent/context.py`          | `agent/context_builder.c`      | Loads SOUL.md + USER.md + memory + tool guidance |
 | `agent/memory.py`           | `memory/memory_store.c`        | MEMORY.md + daily notes      |
 | `session/manager.py`        | `memory/session_mgr.c`         | JSONL per chat, ring buffer  |
-| `channels/telegram.py`      | `telegram/telegram_bot.c`      | Raw HTTP, no python-telegram-bot |
+| `channels/feishu.py`      | `channels/feishu/feishu_bot.c`      | Raw HTTP, no python-Feishu-bot |
 | `bus/events.py` + `queue.py`| `bus/message_bus.c`            | FreeRTOS queues vs asyncio   |
 | `providers/litellm_provider.py` | `llm/llm_proxy.c`         | Direct Anthropic API only    |
 | `config/schema.py`          | `mimi_config.h` + `mimi_secrets.h` | Build-time secrets only  |

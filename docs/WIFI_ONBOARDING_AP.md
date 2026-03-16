@@ -31,7 +31,6 @@ Typical uses:
    - `API Key`
    - `Model`
    - `Provider`
-   - `Telegram`
    - `Feishu`
    - `Proxy`
    - `Search`

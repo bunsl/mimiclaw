@@ -59,15 +59,8 @@ static const char ONBOARD_HTML[] =
 "<select id='provider'>"
 "<option value='anthropic'>Anthropic</option>"
 "<option value='openai'>OpenAI</option>"
+"<option value='minimax'>MiniMax</option>"
 "</select>"
-"</div></div>"
-
-/* Telegram section */
-"<div class='card collapsed' id='sec-tg'>"
-"<div class='card-hdr' onclick='toggle(this)'>Telegram Bot</div>"
-"<div class='card-body'>"
-"<label>Bot Token</label>"
-"<input id='tg_token' placeholder='123456:ABC-DEF...'>"
 "</div></div>"
 
 /* Feishu section */
@@ -134,7 +127,7 @@ static const char ONBOARD_HTML[] =
 "}).catch(()=>{btn.textContent='Scan WiFi Networks';btn.disabled=false})}"
 
 "function save(){"
-"var fields=['ssid','password','api_key','model','provider','tg_token',"
+"var fields=['ssid','password','api_key','model','provider',"
 "'feishu_app_id','feishu_app_secret','proxy_host','proxy_port','proxy_type','search_key','tavily_key'];"
 "var data={};"
 "fields.forEach(f=>{data[f]=document.getElementById(f).value.trim()});"

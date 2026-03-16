@@ -33,22 +33,22 @@
 
 ## P1 — Important Features
 
-### [ ] Telegram User Allowlist (allow_from)
+### [ ] Feishu User Allowlist (allow_from)
 - **nanobot**: `channels/base.py` L59-82 — `is_allowed()` checks sender_id against allow_list
 - **MimiClaw**: No authentication; anyone can message the bot and consume API credits
 - **Recommendation**: Store allow_from list in `mimi_secrets.h` as a build-time define, filter in `process_updates()`
 
-### [ ] Telegram Markdown to HTML Conversion
-- **nanobot**: `channels/telegram.py` L16-76 — `_markdown_to_telegram_html()` full converter: code blocks, inline code, bold, italic, links, strikethrough, lists
+### [ ] Feishu Markdown to HTML Conversion
+- **nanobot**: `channels/feishu.py` L16-76 — `_markdown_to_feishu_rich_text()` full converter: code blocks, inline code, bold, italic, links, strikethrough, lists
 - **MimiClaw**: Uses `parse_mode: Markdown` directly; special characters can cause send failures (has fallback to plain text)
 - **Recommendation**: Implement simplified Markdown-to-HTML converter, or switch to `parse_mode: HTML`
 
-### [ ] Telegram /start Command
-- **nanobot**: `telegram.py` L183-192 — handles `/start` command, replies with welcome message
+### [ ] Feishu /start Command
+- **nanobot**: `feishu.py` L183-192 — handles `/start` command, replies with welcome message
 - **MimiClaw**: Not handled; /start is sent to Claude as a regular message
 
-### [ ] Telegram Media Handling (photos/voice/files)
-- **nanobot**: `telegram.py` L194-289 — handles photo, voice, audio, document; downloads files; transcribes voice
+### [ ] Feishu Media Handling (photos/voice/files)
+- **nanobot**: `feishu.py` L194-289 — handles photo, voice, audio, document; downloads files; transcribes voice
 - **MimiClaw**: Only processes `message.text`, ignores all media messages
 - **Recommendation**: Images can be base64-encoded for Claude Vision; voice requires Whisper API (extra HTTPS request)
 
@@ -102,7 +102,7 @@
 ### [ ] Voice Transcription
 - **nanobot**: `providers/transcription.py` — Groq Whisper API
 - **MimiClaw**: Not implemented
-- **Recommendation**: Requires extra HTTPS request to Whisper API: download Telegram voice -> forward -> get text
+- **Recommendation**: Requires extra HTTPS request to Whisper API: download Feishu voice -> forward -> get text
 
 ### [x] ~~Build-time Config File + Runtime NVS Override~~
 - Implemented: `mimi_secrets.h` as build-time defaults, NVS as runtime override via CLI
@@ -120,10 +120,10 @@
 
 ### [ ] WhatsApp / Feishu Channels
 - **nanobot**: `channels/whatsapp.py`, `channels/feishu.py`
-- **MimiClaw**: Only Telegram + WebSocket
-- **Recommendation**: Low priority, Telegram is sufficient
+- **MimiClaw**: Only Feishu + WebSocket
+- **Recommendation**: Low priority, Feishu is sufficient
 
-### [x] ~~Telegram Proxy Support (HTTP CONNECT)~~
+### [x] ~~Feishu Proxy Support (HTTP CONNECT)~~
 - Implemented: HTTP CONNECT tunnel via `proxy/http_proxy.c`, configurable via `mimi_secrets.h` (`MIMI_SECRET_PROXY_HOST`/`MIMI_SECRET_PROXY_PORT`)
 
 ### [ ] Session Metadata Persistence
@@ -135,7 +135,7 @@
 
 ## Completed Alignment
 
-- [x] Telegram Bot long polling (getUpdates)
+- [x] Feishu Bot long polling (getUpdates)
 - [x] Message Bus (inbound/outbound queues)
 - [x] Agent Loop with ReAct tool use (multi-turn, max 10 iterations)
 - [x] Claude API (Anthropic Messages API, non-streaming, tool_use protocol)
@@ -145,7 +145,7 @@
 - [x] Session Manager (JSONL per chat_id, ring buffer history)
 - [x] WebSocket Gateway (port 18789, JSON protocol)
 - [x] Serial CLI (esp_console, debug/maintenance commands)
-- [x] HTTP CONNECT Proxy (Telegram + Claude API + Brave Search via proxy tunnel)
+- [x] HTTP CONNECT Proxy (Feishu + Claude API + Brave Search via proxy tunnel)
 - [x] OTA Update
 - [x] WiFi Manager (build-time credentials, exponential backoff)
 - [x] SPIFFS storage
@@ -159,10 +159,10 @@
 1. [done] Tool Use Loop + Tool Registry + web_search
 2. Memory Write via Tool Use         <- makes the agent actually remember
 3. Built-in Tools (read_file, write_file, message)
-4. Telegram Allowlist (allow_from)   <- security essential
+4. Feishu Allowlist (allow_from)   <- security essential
 5. Bootstrap File Completion (AGENTS.md, TOOLS.md)
 6. Subagent (simplified)
-7. Telegram Markdown -> HTML
+7. Feishu Markdown -> HTML
 8. Media Handling
 9. Cron / Heartbeat
 10. Other enhancements

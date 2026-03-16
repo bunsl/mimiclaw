@@ -17,12 +17,12 @@
 
 **$5 芯片上的 AI 助理（OpenClaw）。没有 Linux，没有 Node.js，纯 C。**
 
-MimiClaw 把一块小小的 ESP32-S3 开发板变成你的私人 AI 助理。插上 USB 供电，连上 WiFi，通过 Telegram 跟它对话 — 它能处理你丢给它的任何任务，还会随时间积累本地记忆不断进化 — 全部跑在一颗拇指大小的芯片上。
+MimiClaw 把一块小小的 ESP32-S3 开发板变成你的私人 AI 助理。插上 USB 供电，连上 WiFi，通过 Feishu 跟它对话 — 它能处理你丢给它的任何任务，还会随时间积累本地记忆不断进化 — 全部跑在一颗拇指大小的芯片上。
 
 ## 认识 MimiClaw
 
 - **小巧** — 没有 Linux，没有 Node.js，没有臃肿依赖 — 纯 C
-- **好用** — 在 Telegram 发消息，剩下的它来搞定
+- **好用** — 在 Feishu 发消息，剩下的它来搞定
 - **忠诚** — 从记忆中学习，跨重启也不会忘
 - **能干** — USB 供电，0.5W，24/7 运行
 - **可爱** — 一块 ESP32-S3 开发板，$5，没了
@@ -31,7 +31,7 @@ MimiClaw 把一块小小的 ESP32-S3 开发板变成你的私人 AI 助理。插
 
 ![](assets/mimiclaw.png)
 
-你在 Telegram 发一条消息，ESP32-S3 通过 WiFi 收到后送进 Agent 循环 — LLM 思考、调用工具、读取记忆 — 再把回复发回来。同时支持 **Anthropic (Claude)** 和 **OpenAI (GPT)** 两种提供商，运行时可切换。一切都跑在一颗 $5 的芯片上，所有数据存在本地 Flash。
+你在 Feishu 发一条消息，ESP32-S3 通过 WiFi 收到后送进 Agent 循环 — LLM 思考、调用工具、读取记忆 — 再把回复发回来。同时支持 **Anthropic (Claude)** 和 **OpenAI (GPT)** 两种提供商，运行时可切换。一切都跑在一颗 $5 的芯片上，所有数据存在本地 Flash。
 
 ## 快速开始
 
@@ -39,7 +39,7 @@ MimiClaw 把一块小小的 ESP32-S3 开发板变成你的私人 AI 助理。插
 
 - 一块 **ESP32-S3 开发板**，16MB Flash + 8MB PSRAM（如小智 AI 开发板，~¥30）
 - 一根 **USB Type-C 数据线**
-- 一个 **Telegram Bot Token** — 在 Telegram 找 [@BotFather](https://t.me/BotFather) 创建
+- 一个 **Feishu App ID 和 App Secret** — 在 [open.feishu.cn](https://open.feishu.cn/) 创建应用获取
 - 一个 **Anthropic API Key** — 从 [console.anthropic.com](https://console.anthropic.com) 获取，或一个 **OpenAI API Key** — 从 [platform.openai.com](https://platform.openai.com) 获取
 
 ### 安装
@@ -126,7 +126,8 @@ cp main/mimi_secrets.h.example main/mimi_secrets.h
 ```c
 #define MIMI_SECRET_WIFI_SSID       "你的WiFi名"
 #define MIMI_SECRET_WIFI_PASS       "你的WiFi密码"
-#define MIMI_SECRET_TG_TOKEN        "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+#define MIMI_SECRET_FEISHU_APP_ID   "cli_xxxxxxxxxxxxxx"
+#define MIMI_SECRET_FEISHU_APP_SECRET "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 #define MIMI_SECRET_API_KEY         "sk-ant-api03-xxxxx"
 #define MIMI_SECRET_MODEL_PROVIDER  "anthropic"     // "anthropic" 或 "openai"
 #define MIMI_SECRET_SEARCH_KEY      ""              // 可选：Brave Search API key
@@ -161,7 +162,7 @@ idf.py -p PORT flash monitor
 
 ### 代理配置（国内用户）
 
-在国内需要代理才能访问 Telegram 和 Anthropic API。MimiClaw 内置 HTTP CONNECT 隧道支持。
+在国内需要代理才能访问 Feishu 和 Anthropic API。MimiClaw 内置 HTTP CONNECT 隧道支持。
 
 **前提**：局域网内有一个支持 HTTP CONNECT 的代理（Clash Verge、V2Ray 等），并开启了「允许局域网连接」。
 
@@ -182,7 +183,7 @@ mimi> clear_proxy                    # 清除代理
 
 ```
 mimi> wifi_set MySSID MyPassword   # 换 WiFi
-mimi> set_tg_token 123456:ABC...   # 换 Telegram Bot Token
+mimi> set_feishu_creds cli_xxx secret_xxx  # update Feishu app credentials
 mimi> set_api_key sk-ant-api03-... # 换 API Key（Anthropic 或 OpenAI）
 mimi> set_model_provider openai    # 切换提供商（anthropic|openai）
 mimi> set_model gpt-4o             # 换模型
@@ -261,7 +262,7 @@ MimiClaw 把所有数据存为纯文本文件，可以直接读取和编辑：
 | `HEARTBEAT.md` | 待办清单 — 机器人定期检查并自主执行 |
 | `cron.json` | 定时任务 — AI 创建的周期性或一次性任务 |
 | `2026-02-05.md` | 每日笔记 — 今天发生了什么 |
-| `tg_12345.jsonl` | 聊天记录 — 你和它的对话 |
+| `chat_12345.jsonl` | 聊天记录 — 你和它的对话 |
 
 ## 工具
 

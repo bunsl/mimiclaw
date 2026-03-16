@@ -17,12 +17,12 @@
 
 **The world's first AI assistant(OpenClaw) on a $5 chip. No Linux. No Node.js. Just pure C**
 
-MimiClaw turns a tiny ESP32-S3 board into a personal AI assistant. Plug it into USB power, connect to WiFi, and talk to it through Telegram — it handles any task you throw at it and evolves over time with local memory — all on a chip the size of a thumb.
+MimiClaw turns a tiny ESP32-S3 board into a personal AI assistant. Plug it into USB power, connect to WiFi, and talk to it through Feishu — it handles any task you throw at it and evolves over time with local memory — all on a chip the size of a thumb.
 
 ## Meet MimiClaw
 
 - **Tiny** — No Linux, no Node.js, no bloat — just pure C
-- **Handy** — Message it from Telegram, it handles the rest
+- **Handy** — Message it from Feishu, it handles the rest
 - **Loyal** — Learns from memory, remembers across reboots
 - **Energetic** — USB power, 0.5 W, runs 24/7
 - **Lovable** — One ESP32-S3 board, $5, nothing else
@@ -31,7 +31,7 @@ MimiClaw turns a tiny ESP32-S3 board into a personal AI assistant. Plug it into 
 
 ![](assets/mimiclaw.png)
 
-You send a message on Telegram. The ESP32-S3 picks it up over WiFi, feeds it into an agent loop — the LLM thinks, calls tools, reads memory — and sends the reply back. Supports both **Anthropic (Claude)** and **OpenAI (GPT)** as providers, switchable at runtime. Everything runs on a single $5 chip with all your data stored locally on flash.
+You send a message on Feishu. The ESP32-S3 picks it up over WiFi, feeds it into an agent loop — the LLM thinks, calls tools, reads memory — and sends the reply back. Supports both **Anthropic (Claude)** and **OpenAI (GPT)** as providers, switchable at runtime. Everything runs on a single $5 chip with all your data stored locally on flash.
 
 ## Quick Start
 
@@ -39,7 +39,7 @@ You send a message on Telegram. The ESP32-S3 picks it up over WiFi, feeds it int
 
 - An **ESP32-S3 dev board** with 16 MB flash and 8 MB PSRAM (e.g. Xiaozhi AI board, ~$10)
 - A **USB Type-C cable**
-- A **Telegram bot token** — talk to [@BotFather](https://t.me/BotFather) on Telegram to create one
+- A **Feishu app ID and app secret** — from [open.feishu.cn](https://open.feishu.cn/)
 - An **Anthropic API key** — from [console.anthropic.com](https://console.anthropic.com), or an **OpenAI API key** — from [platform.openai.com](https://platform.openai.com)
 
 ### Install
@@ -126,7 +126,8 @@ Edit `main/mimi_secrets.h`:
 ```c
 #define MIMI_SECRET_WIFI_SSID       "YourWiFiName"
 #define MIMI_SECRET_WIFI_PASS       "YourWiFiPassword"
-#define MIMI_SECRET_TG_TOKEN        "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+#define MIMI_SECRET_FEISHU_APP_ID   "cli_xxxxxxxxxxxxxx"
+#define MIMI_SECRET_FEISHU_APP_SECRET "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 #define MIMI_SECRET_API_KEY         "sk-ant-api03-xxxxx"
 #define MIMI_SECRET_MODEL_PROVIDER  "anthropic"     // "anthropic" or "openai"
 #define MIMI_SECRET_SEARCH_KEY      ""              // optional: Brave Search API key
@@ -167,7 +168,7 @@ Connect via serial to configure or debug. **Config commands** let you change set
 
 ```
 mimi> wifi_set MySSID MyPassword   # change WiFi network
-mimi> set_tg_token 123456:ABC...   # change Telegram bot token
+mimi> set_feishu_creds cli_xxx secret_xxx  # change Feishu app credentials
 mimi> set_api_key sk-ant-api03-... # change API key (Anthropic or OpenAI)
 mimi> set_model_provider openai    # switch provider (anthropic|openai)
 mimi> set_model gpt-4o             # change LLM model
@@ -246,7 +247,7 @@ MimiClaw stores everything as plain text files you can read and edit:
 | `HEARTBEAT.md` | Task list the bot checks periodically and acts on autonomously |
 | `cron.json` | Scheduled jobs — recurring or one-shot tasks created by the AI |
 | `2026-02-05.md` | Daily notes — what happened today |
-| `tg_12345.jsonl` | Chat history — your conversation with the bot |
+| `chat_12345.jsonl` | Chat history — your conversation with the bot |
 
 ## Tools
 

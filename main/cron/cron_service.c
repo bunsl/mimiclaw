@@ -34,10 +34,12 @@ static bool cron_sanitize_destination(cron_job_t *job)
         changed = true;
     }
 
-    if (strcmp(job->channel, MIMI_CHAN_TELEGRAM) == 0) {
+    if (strcmp(job->channel, MIMI_CHAN_SYSTEM) != 0) {
         if (job->chat_id[0] == '\0' || strcmp(job->chat_id, "cron") == 0) {
-            ESP_LOGW(TAG, "Cron job %s has invalid telegram chat_id, fallback to system:cron",
-                     job->id[0] ? job->id : "<new>");
+            ESP_LOGW(TAG, "Cron job %s has invalid destination %s:%s, fallback to system:cron",
+                     job->id[0] ? job->id : "<new>",
+                     job->channel,
+                     job->chat_id[0] ? job->chat_id : "(empty)");
             strncpy(job->channel, MIMI_CHAN_SYSTEM, sizeof(job->channel) - 1);
             strncpy(job->chat_id, "cron", sizeof(job->chat_id) - 1);
             changed = true;
