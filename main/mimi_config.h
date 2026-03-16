@@ -108,6 +108,7 @@
 
 /* GPIO */
 #define MIMI_GPIO_CONFIG_SECTION     1   /* enable GPIO tools */
+#define MIMI_LED_DATA_GPIO           48  /* onboard RGB LED data pin (WS2812) */
 
 /* Skills */
 #define MIMI_SKILLS_PREFIX           MIMI_SPIFFS_BASE "/skills/"

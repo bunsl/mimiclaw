@@ -5,6 +5,7 @@
 #include "tools/tool_files.h"
 #include "tools/tool_cron.h"
 #include "tools/tool_gpio.h"
+#include "tools/tool_led.h"
 
 #include <string.h>
 #include "esp_log.h"
@@ -213,6 +214,22 @@ esp_err_t tool_registry_init(void)
         .execute = tool_gpio_read_all_execute,
     };
     register_tool(&ga);
+
+    /* Register onboard RGB LED tool */
+    tool_led_init();
+
+    mimi_tool_t ls = {
+        .name = "led_set",
+        .description = "Set onboard RGB LED color using WS2812 data protocol. Use this for board RGB status LED.",
+        .input_schema_json =
+            "{\"type\":\"object\","
+            "\"properties\":{\"r\":{\"type\":\"integer\",\"description\":\"Red 0-255\"},"
+            "\"g\":{\"type\":\"integer\",\"description\":\"Green 0-255\"},"
+            "\"b\":{\"type\":\"integer\",\"description\":\"Blue 0-255\"}},"
+            "\"required\":[\"r\",\"g\",\"b\"]}",
+        .execute = tool_led_set_execute,
+    };
+    register_tool(&ls);
 
     build_tools_json();
 
