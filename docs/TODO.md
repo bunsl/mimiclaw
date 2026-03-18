@@ -94,10 +94,10 @@
 - **MimiClaw**: Not implemented
 - **Recommendation**: Simple FreeRTOS timer that periodically checks HEARTBEAT.md
 
-### [ ] Multi-LLM Provider Support
+### [x] ~~Multi-LLM Provider Support~~
 - **nanobot**: `providers/litellm_provider.py` — supports OpenRouter, Anthropic, OpenAI, Gemini, DeepSeek, Groq, Zhipu, vLLM via LiteLLM
-- **MimiClaw**: Hardcoded to Anthropic Messages API
-- **Recommendation**: Abstract LLM interface, support OpenAI-compatible API (most providers are compatible)
+- **MimiClaw**: `llm/llm_proxy.c` now supports Anthropic plus OpenAI-compatible providers (OpenAI, MiniMax, Volcengine Ark)
+- **Recommendation**: Add more providers incrementally on top of the OpenAI-compatible path as needed
 
 ### [ ] Voice Transcription
 - **nanobot**: `providers/transcription.py` — Groq Whisper API
@@ -138,14 +138,14 @@
 - [x] Feishu Bot long polling (getUpdates)
 - [x] Message Bus (inbound/outbound queues)
 - [x] Agent Loop with ReAct tool use (multi-turn, max 10 iterations)
-- [x] Claude API (Anthropic Messages API, non-streaming, tool_use protocol)
+- [x] LLM provider integration (Anthropic + OpenAI-compatible APIs, non-streaming, tool_use protocol)
 - [x] Tool Registry + web_search tool (Brave Search API)
 - [x] Context Builder (system prompt + bootstrap files + memory + tool guidance)
 - [x] Memory Store (MEMORY.md + daily notes)
 - [x] Session Manager (JSONL per chat_id, ring buffer history)
 - [x] WebSocket Gateway (port 18789, JSON protocol)
 - [x] Serial CLI (esp_console, debug/maintenance commands)
-- [x] HTTP CONNECT Proxy (Feishu + Claude API + Brave Search via proxy tunnel)
+- [x] HTTP CONNECT Proxy (Feishu + LLM APIs + Brave Search via proxy tunnel)
 - [x] OTA Update
 - [x] WiFi Manager (build-time credentials, exponential backoff)
 - [x] SPIFFS storage

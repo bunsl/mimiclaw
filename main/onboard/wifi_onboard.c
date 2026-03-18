@@ -220,6 +220,18 @@ static esp_err_t http_get_config(httpd_req_t *req)
     json_add_effective_config(root, "api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY, MIMI_SECRET_API_KEY);
     json_add_effective_config(root, "model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL, MIMI_SECRET_MODEL);
     json_add_effective_config(root, "provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER, MIMI_SECRET_MODEL_PROVIDER);
+    json_add_effective_config(root, "feishu_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_FEISHU, MIMI_SECRET_FEISHU_API_KEY);
+    json_add_effective_config(root, "feishu_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_FEISHU, MIMI_SECRET_FEISHU_MODEL);
+    json_add_effective_config(root, "feishu_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_FEISHU, MIMI_SECRET_FEISHU_MODEL_PROVIDER);
+    json_add_effective_config(root, "websocket_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_WS, MIMI_SECRET_WEBSOCKET_API_KEY);
+    json_add_effective_config(root, "websocket_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_WS, MIMI_SECRET_WEBSOCKET_MODEL);
+    json_add_effective_config(root, "websocket_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_WS, MIMI_SECRET_WEBSOCKET_MODEL_PROVIDER);
+    json_add_effective_config(root, "cli_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_CLI, MIMI_SECRET_CLI_API_KEY);
+    json_add_effective_config(root, "cli_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_CLI, MIMI_SECRET_CLI_MODEL);
+    json_add_effective_config(root, "cli_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_CLI, MIMI_SECRET_CLI_MODEL_PROVIDER);
+    json_add_effective_config(root, "system_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_SYSTEM, MIMI_SECRET_SYSTEM_API_KEY);
+    json_add_effective_config(root, "system_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_SYSTEM, MIMI_SECRET_SYSTEM_MODEL);
+    json_add_effective_config(root, "system_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_SYSTEM, MIMI_SECRET_SYSTEM_MODEL_PROVIDER);
     json_add_effective_config(root, "feishu_app_id", MIMI_NVS_FEISHU, MIMI_NVS_KEY_FEISHU_APP_ID, MIMI_SECRET_FEISHU_APP_ID);
     json_add_effective_config(root, "feishu_app_secret", MIMI_NVS_FEISHU, MIMI_NVS_KEY_FEISHU_APP_SECRET, MIMI_SECRET_FEISHU_APP_SECRET);
     json_add_effective_config(root, "proxy_host", MIMI_NVS_PROXY, MIMI_NVS_KEY_PROXY_HOST, MIMI_SECRET_PROXY_HOST);
@@ -305,7 +317,7 @@ static void nvs_sync_u16_field(cJSON *root, const char *json_key,
 static esp_err_t http_post_save(httpd_req_t *req)
 {
     int total_len = req->content_len;
-    if (total_len <= 0 || total_len > 2048) {
+    if (total_len <= 0 || total_len > 4096) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad length");
         return ESP_FAIL;
     }
@@ -342,6 +354,18 @@ static esp_err_t http_post_save(httpd_req_t *req)
     nvs_sync_field(root, "api_key",  MIMI_NVS_LLM,    MIMI_NVS_KEY_API_KEY);
     nvs_sync_field(root, "model",    MIMI_NVS_LLM,    MIMI_NVS_KEY_MODEL);
     nvs_sync_field(root, "provider", MIMI_NVS_LLM,    MIMI_NVS_KEY_PROVIDER);
+    nvs_sync_field(root, "feishu_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_FEISHU);
+    nvs_sync_field(root, "feishu_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_FEISHU);
+    nvs_sync_field(root, "feishu_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_FEISHU);
+    nvs_sync_field(root, "websocket_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_WS);
+    nvs_sync_field(root, "websocket_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_WS);
+    nvs_sync_field(root, "websocket_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_WS);
+    nvs_sync_field(root, "cli_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_CLI);
+    nvs_sync_field(root, "cli_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_CLI);
+    nvs_sync_field(root, "cli_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_CLI);
+    nvs_sync_field(root, "system_api_key", MIMI_NVS_LLM, MIMI_NVS_KEY_API_KEY_SYSTEM);
+    nvs_sync_field(root, "system_model", MIMI_NVS_LLM, MIMI_NVS_KEY_MODEL_SYSTEM);
+    nvs_sync_field(root, "system_provider", MIMI_NVS_LLM, MIMI_NVS_KEY_PROVIDER_SYSTEM);
 
     /* Feishu */
     nvs_sync_field(root, "feishu_app_id",     MIMI_NVS_FEISHU, MIMI_NVS_KEY_FEISHU_APP_ID);

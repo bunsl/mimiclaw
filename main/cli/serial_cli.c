@@ -104,6 +104,13 @@ static struct {
     struct arg_end *end;
 } api_key_args;
 
+/* --- set_channel_api_key command --- */
+static struct {
+    struct arg_str *channel;
+    struct arg_str *key;
+    struct arg_end *end;
+} channel_api_key_args;
+
 static int cmd_set_api_key(int argc, char **argv)
 {
     int nerrors = arg_parse(argc, argv, (void **)&api_key_args);
@@ -116,11 +123,41 @@ static int cmd_set_api_key(int argc, char **argv)
     return 0;
 }
 
+static int cmd_set_channel_api_key(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **)&channel_api_key_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, channel_api_key_args.end, argv[0]);
+        return 1;
+    }
+
+    esp_err_t err = llm_set_channel_api_key(channel_api_key_args.channel->sval[0],
+                                            channel_api_key_args.key->sval[0]);
+    if (err != ESP_OK) {
+        printf("Failed to set channel API key: %s\n", esp_err_to_name(err));
+        return 1;
+    }
+
+    if (strcmp(channel_api_key_args.key->sval[0], "default") == 0) {
+        printf("Channel API key cleared. This channel will use the default API key.\n");
+    } else {
+        printf("Channel API key saved.\n");
+    }
+    return 0;
+}
+
 /* --- set_model command --- */
 static struct {
     struct arg_str *model;
     struct arg_end *end;
 } model_args;
+
+/* --- set_channel_model command --- */
+static struct {
+    struct arg_str *channel;
+    struct arg_str *model;
+    struct arg_end *end;
+} channel_model_args;
 
 static int cmd_set_model(int argc, char **argv)
 {
@@ -134,11 +171,41 @@ static int cmd_set_model(int argc, char **argv)
     return 0;
 }
 
+static int cmd_set_channel_model(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **)&channel_model_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, channel_model_args.end, argv[0]);
+        return 1;
+    }
+
+    esp_err_t err = llm_set_channel_model(channel_model_args.channel->sval[0],
+                                          channel_model_args.model->sval[0]);
+    if (err != ESP_OK) {
+        printf("Failed to set channel model: %s\n", esp_err_to_name(err));
+        return 1;
+    }
+
+    if (strcmp(channel_model_args.model->sval[0], "default") == 0) {
+        printf("Channel model cleared. This channel will use the default model.\n");
+    } else {
+        printf("Channel model set.\n");
+    }
+    return 0;
+}
+
 /* --- set_model_provider command --- */
 static struct {
     struct arg_str *provider;
     struct arg_end *end;
 } provider_args;
+
+/* --- set_channel_provider command --- */
+static struct {
+    struct arg_str *channel;
+    struct arg_str *provider;
+    struct arg_end *end;
+} channel_provider_args;
 
 static int cmd_set_model_provider(int argc, char **argv)
 {
@@ -149,6 +216,29 @@ static int cmd_set_model_provider(int argc, char **argv)
     }
     llm_set_provider(provider_args.provider->sval[0]);
     printf("Model provider set.\n");
+    return 0;
+}
+
+static int cmd_set_channel_provider(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **)&channel_provider_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, channel_provider_args.end, argv[0]);
+        return 1;
+    }
+
+    esp_err_t err = llm_set_channel_provider(channel_provider_args.channel->sval[0],
+                                             channel_provider_args.provider->sval[0]);
+    if (err != ESP_OK) {
+        printf("Failed to set channel provider: %s\n", esp_err_to_name(err));
+        return 1;
+    }
+
+    if (strcmp(channel_provider_args.provider->sval[0], "default") == 0) {
+        printf("Channel provider cleared. This channel will use the default provider.\n");
+    } else {
+        printf("Channel provider set.\n");
+    }
     return 0;
 }
 
@@ -197,6 +287,7 @@ static int cmd_session_list(int argc, char **argv)
 
 /* --- session_clear command --- */
 static struct {
+    struct arg_str *channel;
     struct arg_str *chat_id;
     struct arg_end *end;
 } session_clear_args;
@@ -208,7 +299,7 @@ static int cmd_session_clear(int argc, char **argv)
         arg_print_errors(stderr, session_clear_args.end, argv[0]);
         return 1;
     }
-    if (session_clear(session_clear_args.chat_id->sval[0]) == ESP_OK) {
+    if (session_clear(session_clear_args.channel->sval[0], session_clear_args.chat_id->sval[0]) == ESP_OK) {
         printf("Session cleared.\n");
     } else {
         printf("Session not found.\n");
@@ -545,6 +636,18 @@ static int cmd_config_show(int argc, char **argv)
     print_config("API Key",    MIMI_NVS_LLM,    MIMI_NVS_KEY_API_KEY,  MIMI_SECRET_API_KEY,    true);
     print_config("Model",      MIMI_NVS_LLM,    MIMI_NVS_KEY_MODEL,    MIMI_SECRET_MODEL,      false);
     print_config("Provider",   MIMI_NVS_LLM,    MIMI_NVS_KEY_PROVIDER, MIMI_SECRET_MODEL_PROVIDER, false);
+    print_config("Feishu Key", MIMI_NVS_LLM,    MIMI_NVS_KEY_API_KEY_FEISHU, MIMI_SECRET_FEISHU_API_KEY, true);
+    print_config("Feishu Model", MIMI_NVS_LLM,  MIMI_NVS_KEY_MODEL_FEISHU, MIMI_SECRET_FEISHU_MODEL, false);
+    print_config("Feishu Prov", MIMI_NVS_LLM,   MIMI_NVS_KEY_PROVIDER_FEISHU, MIMI_SECRET_FEISHU_MODEL_PROVIDER, false);
+    print_config("WS Key",     MIMI_NVS_LLM,    MIMI_NVS_KEY_API_KEY_WS, MIMI_SECRET_WEBSOCKET_API_KEY, true);
+    print_config("WS Model",   MIMI_NVS_LLM,    MIMI_NVS_KEY_MODEL_WS, MIMI_SECRET_WEBSOCKET_MODEL, false);
+    print_config("WS Prov",    MIMI_NVS_LLM,    MIMI_NVS_KEY_PROVIDER_WS, MIMI_SECRET_WEBSOCKET_MODEL_PROVIDER, false);
+    print_config("CLI Key",    MIMI_NVS_LLM,    MIMI_NVS_KEY_API_KEY_CLI, MIMI_SECRET_CLI_API_KEY, true);
+    print_config("CLI Model",  MIMI_NVS_LLM,    MIMI_NVS_KEY_MODEL_CLI, MIMI_SECRET_CLI_MODEL, false);
+    print_config("CLI Prov",   MIMI_NVS_LLM,    MIMI_NVS_KEY_PROVIDER_CLI, MIMI_SECRET_CLI_MODEL_PROVIDER, false);
+    print_config("System Key", MIMI_NVS_LLM,    MIMI_NVS_KEY_API_KEY_SYSTEM, MIMI_SECRET_SYSTEM_API_KEY, true);
+    print_config("System Model", MIMI_NVS_LLM,  MIMI_NVS_KEY_MODEL_SYSTEM, MIMI_SECRET_SYSTEM_MODEL, false);
+    print_config("System Prov", MIMI_NVS_LLM,   MIMI_NVS_KEY_PROVIDER_SYSTEM, MIMI_SECRET_SYSTEM_MODEL_PROVIDER, false);
     print_config("Proxy Host", MIMI_NVS_PROXY,  MIMI_NVS_KEY_PROXY_HOST, MIMI_SECRET_PROXY_HOST, false);
     print_config_u16("Proxy Port", MIMI_NVS_PROXY, MIMI_NVS_KEY_PROXY_PORT, MIMI_SECRET_PROXY_PORT);
     print_config("Search Key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_API_KEY,  MIMI_SECRET_SEARCH_KEY, true);
@@ -846,6 +949,18 @@ esp_err_t serial_cli_init(void)
     };
     esp_console_cmd_register(&api_key_cmd);
 
+    /* set_channel_api_key */
+    channel_api_key_args.channel = arg_str1(NULL, NULL, "<channel>", "Channel (feishu|websocket|cli|system)");
+    channel_api_key_args.key = arg_str1(NULL, NULL, "<key>", "API key override or 'default'");
+    channel_api_key_args.end = arg_end(2);
+    esp_console_cmd_t channel_api_key_cmd = {
+        .command = "set_channel_api_key",
+        .help = "Set channel-specific API key override (or use default to clear)",
+        .func = &cmd_set_channel_api_key,
+        .argtable = &channel_api_key_args,
+    };
+    esp_console_cmd_register(&channel_api_key_cmd);
+
     /* set_model */
     model_args.model = arg_str1(NULL, NULL, "<model>", "Model identifier");
     model_args.end = arg_end(1);
@@ -857,8 +972,20 @@ esp_err_t serial_cli_init(void)
     };
     esp_console_cmd_register(&model_cmd);
 
+    /* set_channel_model */
+    channel_model_args.channel = arg_str1(NULL, NULL, "<channel>", "Channel (feishu|websocket|cli|system)");
+    channel_model_args.model = arg_str1(NULL, NULL, "<model>", "Model override or 'default'");
+    channel_model_args.end = arg_end(2);
+    esp_console_cmd_t channel_model_cmd = {
+        .command = "set_channel_model",
+        .help = "Set channel-specific model override (or use default to clear)",
+        .func = &cmd_set_channel_model,
+        .argtable = &channel_model_args,
+    };
+    esp_console_cmd_register(&channel_model_cmd);
+
     /* set_model_provider */
-    provider_args.provider = arg_str1(NULL, NULL, "<provider>", "Model provider (anthropic|openai|minimax)");
+    provider_args.provider = arg_str1(NULL, NULL, "<provider>", "Model provider (anthropic|openai|minimax|volcengine)");
     provider_args.end = arg_end(1);
     esp_console_cmd_t provider_cmd = {
         .command = "set_model_provider",
@@ -867,6 +994,18 @@ esp_err_t serial_cli_init(void)
         .argtable = &provider_args,
     };
     esp_console_cmd_register(&provider_cmd);
+
+    /* set_channel_provider */
+    channel_provider_args.channel = arg_str1(NULL, NULL, "<channel>", "Channel (feishu|websocket|cli|system)");
+    channel_provider_args.provider = arg_str1(NULL, NULL, "<provider>", "Provider override or 'default'");
+    channel_provider_args.end = arg_end(2);
+    esp_console_cmd_t channel_provider_cmd = {
+        .command = "set_channel_provider",
+        .help = "Set channel-specific provider override (e.g. set_channel_provider feishu volcengine, or use default)",
+        .func = &cmd_set_channel_provider,
+        .argtable = &channel_provider_args,
+    };
+    esp_console_cmd_register(&channel_provider_cmd);
 
     /* skill_list */
     esp_console_cmd_t skill_list_cmd = {
@@ -926,11 +1065,12 @@ esp_err_t serial_cli_init(void)
     esp_console_cmd_register(&sess_list_cmd);
 
     /* session_clear */
+    session_clear_args.channel = arg_str1(NULL, NULL, "<channel>", "Channel (feishu|websocket|cli|system)");
     session_clear_args.chat_id = arg_str1(NULL, NULL, "<chat_id>", "Chat ID to clear");
-    session_clear_args.end = arg_end(1);
+    session_clear_args.end = arg_end(2);
     esp_console_cmd_t sess_clear_cmd = {
         .command = "session_clear",
-        .help = "Clear a session",
+        .help = "Clear a session by channel and chat_id",
         .func = &cmd_session_clear,
         .argtable = &session_clear_args,
     };

@@ -54,11 +54,11 @@ Feishu App (User)
 │   └──────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────┘
          │
-         │  Anthropic Messages API (HTTPS)
+         │  Anthropic / OpenAI-compatible LLM APIs (HTTPS)
          │  + Brave Search API (HTTPS)
          ▼
    ┌───────────┐   ┌──────────────┐
-   │ Claude API │   │ Brave Search │
+   │  LLM APIs  │   │ Brave Search │
    └───────────┘   └──────────────┘
 ```
 
@@ -75,7 +75,7 @@ Feishu App (User)
    b. Build system prompt (SOUL.md + USER.md + MEMORY.md + recent notes + tool guidance)
    c. Build cJSON messages array (history + current message)
    d. ReAct loop (max 10 iterations):
-      i.   Call Claude API via HTTPS (non-streaming, with tools array)
+      i.   Call the configured LLM API via HTTPS (non-streaming, with tools array)
       ii.  Parse JSON response → text blocks + tool_use blocks
       iii. If stop_reason == "tool_use":
            - Execute each tool (e.g. web_search → Brave Search API)
@@ -114,7 +114,7 @@ main/
 │
 ├── llm/
 │   ├── llm_proxy.h         llm_chat() + llm_chat_tools() API, tool_use types
-│   └── llm_proxy.c         Anthropic Messages API (non-streaming), tool_use parsing
+│   └── llm_proxy.c         Anthropic + OpenAI-compatible APIs (non-streaming), tool_use parsing
 │
 ├── agent/
 │   ├── agent_loop.h        Agent task init/start
@@ -158,7 +158,7 @@ main/
 | Task               | Core | Priority | Stack  | Description                          |
 |--------------------|------|----------|--------|--------------------------------------|
 | `feishu_poll`          | 0    | 5        | 12 KB  | Feishu long polling (30s timeout)  |
-| `agent_loop`       | 1    | 6        | 12 KB  | Message processing + Claude API call |
+| `agent_loop`       | 1    | 6        | 12 KB  | Message processing + LLM API call |
 | `outbound`         | 0    | 5        | 8 KB   | Route responses to Feishu / WS     |
 | `serial_cli`       | 0    | 3        | 4 KB   | USB serial console REPL              |
 | httpd (internal)   | 0    | 5        | —      | WebSocket server (esp_http_server)   |
@@ -233,7 +233,7 @@ All configuration is done exclusively through `mimi_secrets.h` at build time. Th
 | `MIMI_SECRET_WIFI_PASS`     | WiFi password                           |
 | `MIMI_SECRET_FEISHU_APP_ID`      | Feishu app ID                         |
 | `MIMI_SECRET_FEISHU_APP_SECRET`  | Feishu app secret                     |
-| `MIMI_SECRET_API_KEY`       | Anthropic API key                       |
+| `MIMI_SECRET_API_KEY`       | LLM API key (Anthropic/OpenAI-compatible) |
 | `MIMI_SECRET_MODEL`         | Model ID (default: claude-opus-4-6)     |
 | `MIMI_SECRET_PROXY_HOST`    | HTTP proxy hostname/IP (optional)       |
 | `MIMI_SECRET_PROXY_PORT`    | HTTP proxy port (optional)              |
@@ -279,11 +279,13 @@ Client `chat_id` is auto-assigned on connection (`ws_<fd>`) but can be overridde
 
 ---
 
-## Claude API Integration
+## LLM API Integration
 
-Endpoint: `POST https://api.anthropic.com/v1/messages`
+Anthropic endpoint: `POST https://api.anthropic.com/v1/messages`
 
-Request format (Anthropic-native, non-streaming, with tools):
+OpenAI-compatible providers use `POST /v1/chat/completions`, except provider-specific variants such as Volcengine Ark: `POST https://ark.cn-beijing.volces.com/api/v3/chat/completions`
+
+Request format (Anthropic-native example, non-streaming, with tools):
 ```json
 {
   "model": "claude-opus-4-6",
@@ -389,7 +391,7 @@ The CLI provides debug and maintenance commands only. All configuration is done 
 | `session/manager.py`        | `memory/session_mgr.c`         | JSONL per chat, ring buffer  |
 | `channels/feishu.py`      | `channels/feishu/feishu_bot.c`      | Raw HTTP, no python-Feishu-bot |
 | `bus/events.py` + `queue.py`| `bus/message_bus.c`            | FreeRTOS queues vs asyncio   |
-| `providers/litellm_provider.py` | `llm/llm_proxy.c`         | Direct Anthropic API only    |
+| `providers/litellm_provider.py` | `llm/llm_proxy.c`         | Anthropic + OpenAI-compatible APIs |
 | `config/schema.py`          | `mimi_config.h` + `mimi_secrets.h` | Build-time secrets only  |
 | `cli/commands.py`           | `cli/serial_cli.c`             | esp_console REPL             |
 | `agent/tools/*`             | `tools/tool_registry.c` + `tool_web_search.c` | web_search via Brave API |

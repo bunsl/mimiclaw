@@ -198,7 +198,7 @@ static void agent_loop_task(void *arg)
         ESP_LOGI(TAG, "LLM turn context: channel=%s chat_id=%s", msg.channel, msg.chat_id);
 
         /* 2. Load session history into cJSON array */
-        session_get_history_json(msg.chat_id, history_json,
+        session_get_history_json(msg.channel, msg.chat_id, history_json,
                                  MIMI_LLM_STREAM_BUF_SIZE, MIMI_AGENT_MAX_HISTORY);
 
         cJSON *messages = cJSON_Parse(history_json);
@@ -235,7 +235,7 @@ static void agent_loop_task(void *arg)
 #endif
 
             llm_response_t resp;
-            err = llm_chat_tools(system_prompt, messages, tools_json, &resp);
+            err = llm_chat_tools_for_channel(msg.channel, system_prompt, messages, tools_json, &resp);
 
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "LLM call failed: %s", esp_err_to_name(err));
@@ -275,8 +275,8 @@ static void agent_loop_task(void *arg)
         /* 5. Send response */
         if (final_text && final_text[0]) {
             /* Save to session (only user text + final assistant text) */
-            esp_err_t save_user = session_append(msg.chat_id, "user", msg.content);
-            esp_err_t save_asst = session_append(msg.chat_id, "assistant", final_text);
+            esp_err_t save_user = session_append(msg.channel, msg.chat_id, "user", msg.content);
+            esp_err_t save_asst = session_append(msg.channel, msg.chat_id, "assistant", final_text);
             if (save_user != ESP_OK || save_asst != ESP_OK) {
                 ESP_LOGW(TAG, "Session save failed for chat %s (user=%s, assistant=%s)",
                          msg.chat_id,

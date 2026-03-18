@@ -31,7 +31,7 @@ MimiClaw turns a tiny ESP32-S3 board into a personal AI assistant. Plug it into 
 
 ![](assets/mimiclaw.png)
 
-You send a message on Feishu. The ESP32-S3 picks it up over WiFi, feeds it into an agent loop — the LLM thinks, calls tools, reads memory — and sends the reply back. Supports **Anthropic (Claude)**, **OpenAI (GPT)**, and **MiniMax** as providers, switchable at runtime. Everything runs on a single $5 chip with all your data stored locally on flash.
+You send a message on Feishu. The ESP32-S3 picks it up over WiFi, feeds it into an agent loop — the LLM thinks, calls tools, reads memory — and sends the reply back. Supports **Anthropic (Claude)**, **OpenAI (GPT)**, **MiniMax**, and **Volcengine Ark** as providers, switchable at runtime. Everything runs on a single $5 chip with all your data stored locally on flash.
 
 ## Quick Start
 
@@ -40,7 +40,7 @@ You send a message on Feishu. The ESP32-S3 picks it up over WiFi, feeds it into 
 - An **ESP32-S3 dev board** with 16 MB flash and 8 MB PSRAM (e.g. Xiaozhi AI board, ~$10)
 - A **USB Type-C cable**
 - A **Feishu app ID and app secret** — from [open.feishu.cn](https://open.feishu.cn/)
-- An **Anthropic API key** — from [console.anthropic.com](https://console.anthropic.com), an **OpenAI API key** — from [platform.openai.com](https://platform.openai.com), or a **MiniMax API key**
+- An **Anthropic API key** — from [console.anthropic.com](https://console.anthropic.com), an **OpenAI API key** — from [platform.openai.com](https://platform.openai.com), a **MiniMax API key**, or a **Volcengine Ark API key**
 
 ### Install
 
@@ -129,7 +129,20 @@ Edit `main/mimi_secrets.h`:
 #define MIMI_SECRET_FEISHU_APP_ID   "cli_xxxxxxxxxxxxxx"
 #define MIMI_SECRET_FEISHU_APP_SECRET "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 #define MIMI_SECRET_API_KEY         "sk-ant-api03-xxxxx"
-#define MIMI_SECRET_MODEL_PROVIDER  "anthropic"     // "anthropic", "openai", or "minimax"
+#define MIMI_SECRET_MODEL           "claude-opus-4-5"
+#define MIMI_SECRET_MODEL_PROVIDER  "anthropic"     // "anthropic", "openai", "minimax", or "volcengine"
+#define MIMI_SECRET_FEISHU_API_KEY          ""       // optional: override API key for Feishu only
+#define MIMI_SECRET_FEISHU_MODEL            ""       // optional: override model for Feishu only
+#define MIMI_SECRET_FEISHU_MODEL_PROVIDER   ""       // optional: override provider for Feishu only
+#define MIMI_SECRET_WEBSOCKET_API_KEY       ""       // optional: override API key for WebSocket only
+#define MIMI_SECRET_WEBSOCKET_MODEL         ""       // optional: override model for WebSocket only
+#define MIMI_SECRET_WEBSOCKET_MODEL_PROVIDER ""      // optional: override provider for WebSocket only
+#define MIMI_SECRET_CLI_API_KEY             ""       // optional: override API key for CLI only
+#define MIMI_SECRET_CLI_MODEL               ""       // optional: override model for CLI only
+#define MIMI_SECRET_CLI_MODEL_PROVIDER      ""       // optional: override provider for CLI only
+#define MIMI_SECRET_SYSTEM_API_KEY          ""       // optional: override API key for system/cron only
+#define MIMI_SECRET_SYSTEM_MODEL            ""       // optional: override model for system/cron only
+#define MIMI_SECRET_SYSTEM_MODEL_PROVIDER   ""       // optional: override provider for system/cron only
 #define MIMI_SECRET_SEARCH_KEY      ""              // optional: Brave Search API key
 #define MIMI_SECRET_TAVILY_KEY      ""              // optional: Tavily API key (preferred)
 #define MIMI_SECRET_PROXY_HOST      ""              // optional: e.g. "10.0.0.1"
@@ -169,8 +182,14 @@ Connect via serial to configure or debug. **Config commands** let you change set
 ```
 mimi> wifi_set MySSID MyPassword   # change WiFi network
 mimi> set_feishu_creds cli_xxx secret_xxx  # change Feishu app credentials
-mimi> set_api_key sk-ant-api03-... # change API key (Anthropic/OpenAI/MiniMax)
-mimi> set_model_provider minimax   # switch provider (anthropic|openai|minimax)
+mimi> set_api_key sk-ant-api03-... # change API key (Anthropic/OpenAI/MiniMax/Volcengine)
+mimi> set_model_provider minimax   # switch provider (anthropic|openai|minimax|volcengine)
+mimi> set_channel_api_key feishu <key>      # override API key for one channel
+mimi> set_channel_model feishu ep-2025...   # override model for one channel
+mimi> set_channel_provider feishu volcengine # override provider for one channel
+mimi> set_channel_api_key feishu default     # clear channel API key override
+mimi> set_channel_model feishu default       # clear channel model override
+mimi> set_channel_provider feishu default    # clear channel provider override
 mimi> set_model gpt-4o             # change LLM model
 mimi> set_proxy 127.0.0.1 7897  # set HTTP proxy
 mimi> clear_proxy                  # remove proxy
@@ -251,7 +270,7 @@ MimiClaw stores everything as plain text files you can read and edit:
 
 ## Tools
 
-MimiClaw supports tool calling for Anthropic, OpenAI, and MiniMax — the LLM can call tools during a conversation and loop until the task is done (ReAct pattern).
+MimiClaw supports tool calling for Anthropic, OpenAI, MiniMax, and Volcengine Ark — the LLM can call tools during a conversation and loop until the task is done (ReAct pattern).
 
 | Tool | Description |
 |------|-------------|
@@ -281,10 +300,10 @@ This turns MimiClaw into a proactive assistant — write tasks to `HEARTBEAT.md`
 - **OTA updates** — flash new firmware over WiFi, no USB needed
 - **Dual-core** — network I/O and AI processing run on separate CPU cores
 - **HTTP proxy** — CONNECT tunnel support for restricted networks
-- **Multi-provider** — supports Anthropic (Claude), OpenAI (GPT), and MiniMax, switchable at runtime
+- **Multi-provider** — supports Anthropic (Claude), OpenAI (GPT), MiniMax, and Volcengine Ark, switchable at runtime
 - **Cron scheduler** — the AI can schedule its own recurring and one-shot tasks, persisted across reboots
 - **Heartbeat** — periodically checks a task file and prompts the AI to act autonomously
-- **Tool use** — ReAct agent loop with tool calling for all three providers
+- **Tool use** — ReAct agent loop with tool calling for all four providers
 
 ## For Developers
 
