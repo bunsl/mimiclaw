@@ -239,6 +239,14 @@ static esp_err_t http_get_config(httpd_req_t *req)
     json_add_effective_config(root, "proxy_type", MIMI_NVS_PROXY, MIMI_NVS_KEY_PROXY_TYPE, MIMI_SECRET_PROXY_TYPE);
     json_add_effective_config(root, "search_key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_API_KEY, MIMI_SECRET_SEARCH_KEY);
     json_add_effective_config(root, "tavily_key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_TAVILY_KEY, MIMI_SECRET_TAVILY_KEY);
+    json_add_effective_config(root, "display_theme", MIMI_NVS_DISPLAY, MIMI_NVS_KEY_DISPLAY_THEME, MIMI_SECRET_DISPLAY_THEME);
+    json_add_effective_config(root, "display_locale", MIMI_NVS_DISPLAY, MIMI_NVS_KEY_DISPLAY_LOCALE, MIMI_SECRET_DISPLAY_LOCALE);
+    json_add_effective_config(root, "voice_appid", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_APPID, MIMI_SECRET_VOICE_APPID);
+    json_add_effective_config(root, "voice_access_token", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_TOKEN, MIMI_SECRET_VOICE_ACCESS_TOKEN);
+    json_add_effective_config(root, "voice_cluster", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_CLUSTER, MIMI_SECRET_VOICE_CLUSTER);
+    json_add_effective_config(root, "voice_ws_url", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_WS_URL, MIMI_SECRET_VOICE_WS_URL);
+    json_add_effective_config(root, "voice_language", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_LANGUAGE, MIMI_SECRET_VOICE_LANGUAGE);
+    json_add_effective_config(root, "voice_continuous_mode", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_CONT_MODE, MIMI_SECRET_VOICE_CONTINUOUS);
 
     char *json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -379,6 +387,18 @@ static esp_err_t http_post_save(httpd_req_t *req)
     /* Search */
     nvs_sync_field(root, "search_key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_API_KEY);
     nvs_sync_field(root, "tavily_key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_TAVILY_KEY);
+
+    /* Display */
+    nvs_sync_field(root, "display_theme", MIMI_NVS_DISPLAY, MIMI_NVS_KEY_DISPLAY_THEME);
+    nvs_sync_field(root, "display_locale", MIMI_NVS_DISPLAY, MIMI_NVS_KEY_DISPLAY_LOCALE);
+
+    /* Voice */
+    nvs_sync_field(root, "voice_appid", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_APPID);
+    nvs_sync_field(root, "voice_access_token", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_TOKEN);
+    nvs_sync_field(root, "voice_cluster", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_CLUSTER);
+    nvs_sync_field(root, "voice_ws_url", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_WS_URL);
+    nvs_sync_field(root, "voice_language", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_LANGUAGE);
+    nvs_sync_field(root, "voice_continuous_mode", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_CONT_MODE);
 
     cJSON_Delete(root);
 

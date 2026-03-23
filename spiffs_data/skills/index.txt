@@ -1,0 +1,7 @@
+# Skill manifest for SPIFFS runtime loading
+daily-briefing.md
+display-control.md
+gpio-control.md
+led-control.md
+skill-creator.md
+weather.md

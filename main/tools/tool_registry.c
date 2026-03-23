@@ -6,18 +6,23 @@
 #include "tools/tool_cron.h"
 #include "tools/tool_gpio.h"
 #include "tools/tool_led.h"
+#include "tools/tool_display.h"
 
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "esp_log.h"
-#include "cJSON.h"
 
 static const char *TAG = "tools";
 
-#define MAX_TOOLS 16
+#define MAX_TOOLS 24
+#define TOOLS_JSON_PREBUFFER_BYTES (20 * 1024)
 
 static mimi_tool_t s_tools[MAX_TOOLS];
 static int s_tool_count = 0;
 static char *s_tools_json = NULL;  /* cached JSON array string */
+static SemaphoreHandle_t s_tools_json_lock = NULL;
 
 static void register_tool(const mimi_tool_t *tool)
 {
@@ -29,26 +34,146 @@ static void register_tool(const mimi_tool_t *tool)
     ESP_LOGI(TAG, "Registered tool: %s", tool->name);
 }
 
-static void build_tools_json(void)
+static bool append_literal(char **cursor, char *end, const char *text)
 {
-    cJSON *arr = cJSON_CreateArray();
+    size_t len;
 
-    for (int i = 0; i < s_tool_count; i++) {
-        cJSON *tool = cJSON_CreateObject();
-        cJSON_AddStringToObject(tool, "name", s_tools[i].name);
-        cJSON_AddStringToObject(tool, "description", s_tools[i].description);
-
-        cJSON *schema = cJSON_Parse(s_tools[i].input_schema_json);
-        if (schema) {
-            cJSON_AddItemToObject(tool, "input_schema", schema);
-        }
-
-        cJSON_AddItemToArray(arr, tool);
+    if (!cursor || !*cursor || !end || !text) {
+        return false;
     }
 
+    len = strlen(text);
+    if ((size_t)(end - *cursor) < len) {
+        return false;
+    }
+
+    memcpy(*cursor, text, len);
+    *cursor += len;
+    return true;
+}
+
+static bool append_json_string(char **cursor, char *end, const char *text)
+{
+    const unsigned char *src = (const unsigned char *)(text ? text : "");
+
+    if (!append_literal(cursor, end, "\"")) {
+        return false;
+    }
+
+    while (*src) {
+        char escape_buf[7];
+
+        switch (*src) {
+        case '\"':
+            if (!append_literal(cursor, end, "\\\"")) {
+                return false;
+            }
+            break;
+        case '\\':
+            if (!append_literal(cursor, end, "\\\\")) {
+                return false;
+            }
+            break;
+        case '\b':
+            if (!append_literal(cursor, end, "\\b")) {
+                return false;
+            }
+            break;
+        case '\f':
+            if (!append_literal(cursor, end, "\\f")) {
+                return false;
+            }
+            break;
+        case '\n':
+            if (!append_literal(cursor, end, "\\n")) {
+                return false;
+            }
+            break;
+        case '\r':
+            if (!append_literal(cursor, end, "\\r")) {
+                return false;
+            }
+            break;
+        case '\t':
+            if (!append_literal(cursor, end, "\\t")) {
+                return false;
+            }
+            break;
+        default:
+            if (*src < 0x20) {
+                snprintf(escape_buf, sizeof(escape_buf), "\\u%04x", *src);
+                if (!append_literal(cursor, end, escape_buf)) {
+                    return false;
+                }
+            } else {
+                if ((size_t)(end - *cursor) < 1) {
+                    return false;
+                }
+                **cursor = (char)*src;
+                (*cursor)++;
+            }
+            break;
+        }
+        ++src;
+    }
+
+    return append_literal(cursor, end, "\"");
+}
+
+static void build_tools_json(void)
+{
+    char *new_tools_json;
+    char *cursor;
+    char *end;
+    bool ok = true;
+
+    ESP_LOGI(TAG, "build_tools_json: begin tool_count=%d", s_tool_count);
+
+    new_tools_json = malloc(TOOLS_JSON_PREBUFFER_BYTES);
+    if (!new_tools_json) {
+        ESP_LOGE(TAG, "Failed to allocate tools JSON buffer");
+        return;
+    }
+
+    cursor = new_tools_json;
+    end = new_tools_json + TOOLS_JSON_PREBUFFER_BYTES - 1;
+
+    ok = append_literal(&cursor, end, "[");
+    for (int i = 0; ok && i < s_tool_count; i++) {
+        if (i > 0) {
+            ok = append_literal(&cursor, end, ",");
+        }
+        if (!ok) {
+            break;
+        }
+
+        ok = append_literal(&cursor, end, "{\"name\":");
+        ok = ok && append_json_string(&cursor, end, s_tools[i].name);
+        ok = ok && append_literal(&cursor, end, ",\"description\":");
+        ok = ok && append_json_string(&cursor, end, s_tools[i].description);
+        ok = ok && append_literal(&cursor, end, ",\"input_schema\":");
+        ok = ok && append_literal(&cursor, end,
+                                   s_tools[i].input_schema_json ? s_tools[i].input_schema_json : "null");
+        ok = ok && append_literal(&cursor, end, "}");
+
+        if ((i & 0x3) == 0x3) {
+            vTaskDelay(1);
+        }
+    }
+
+    if (ok) {
+        ok = append_literal(&cursor, end, "]");
+    }
+    if (!ok) {
+        ESP_LOGE(TAG, "Tools JSON buffer overflow");
+        free(new_tools_json);
+        return;
+    }
+
+    *cursor = '\0';
     free(s_tools_json);
-    s_tools_json = cJSON_PrintUnformatted(arr);
-    cJSON_Delete(arr);
+    s_tools_json = new_tools_json;
+    ESP_LOGI(TAG, "build_tools_json: print complete len=%d", (int)strlen(s_tools_json));
 
     ESP_LOGI(TAG, "Tools JSON built (%d tools)", s_tool_count);
 }
@@ -56,6 +181,14 @@ static void build_tools_json(void)
 esp_err_t tool_registry_init(void)
 {
     s_tool_count = 0;
+    if (!s_tools_json_lock) {
+        s_tools_json_lock = xSemaphoreCreateMutex();
+        if (!s_tools_json_lock) {
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    free(s_tools_json);
+    s_tools_json = NULL;
 
     /* Register web_search */
     tool_web_search_init();
@@ -231,7 +364,56 @@ esp_err_t tool_registry_init(void)
     };
     register_tool(&ls);
 
-    build_tools_json();
+    /* Register display tools */
+    mimi_tool_t ds = {
+        .name = "display_show_text",
+        .description = "Show a short message on the onboard display with optional title, icon, role, theme-aware layout, and optional timeout.",
+        .input_schema_json =
+            "{\"type\":\"object\","
+            "\"properties\":{"
+            "\"title\":{\"type\":\"string\",\"description\":\"Optional short title shown above the main text\"},"
+            "\"text\":{\"type\":\"string\",\"description\":\"Main text to show on the display\"},"
+            "\"icon\":{\"type\":\"string\",\"description\":\"Optional Font Awesome icon name such as wifi, microphone, triangle_exclamation, or microchip_ai\"},"
+            "\"role\":{\"type\":\"string\",\"description\":\"Optional semantic role used to pick a default icon (assistant|user|system|tool|error)\"},"
+            "\"duration_ms\":{\"type\":\"integer\",\"description\":\"Optional timeout in milliseconds after which the previous screen content is restored\"}"
+            "},"
+            "\"required\":[\"text\"]}",
+        .execute = tool_display_show_text_execute,
+    };
+    register_tool(&ds);
+
+    mimi_tool_t dc = {
+        .name = "display_clear",
+        .description = "Clear the current display message area while keeping the board status bar active.",
+        .input_schema_json =
+            "{\"type\":\"object\","
+            "\"properties\":{},"
+            "\"required\":[]}",
+        .execute = tool_display_clear_execute,
+    };
+    register_tool(&dc);
+
+    mimi_tool_t dt = {
+        .name = "display_set_theme",
+        .description = "Set the onboard display theme and persist it across restarts. Supported values: dark, light.",
+        .input_schema_json =
+            "{\"type\":\"object\","
+            "\"properties\":{\"theme\":{\"type\":\"string\",\"description\":\"Theme name: dark or light\"}},"
+            "\"required\":[\"theme\"]}",
+        .execute = tool_display_set_theme_execute,
+    };
+    register_tool(&dt);
+
+    mimi_tool_t dl = {
+        .name = "display_set_locale",
+        .description = "Set the onboard display locale and persist it across restarts. Example values: zh-CN, en-US, ja-JP.",
+        .input_schema_json =
+            "{\"type\":\"object\","
+            "\"properties\":{\"locale\":{\"type\":\"string\",\"description\":\"Locale code such as zh-CN, en-US, or ja-JP\"}},"
+            "\"required\":[\"locale\"]}",
+        .execute = tool_display_set_locale_execute,
+    };
+    register_tool(&dl);
 
     ESP_LOGI(TAG, "Tool registry initialized");
     return ESP_OK;
@@ -239,6 +421,19 @@ esp_err_t tool_registry_init(void)
 
 const char *tool_registry_get_tools_json(void)
 {
+    if (s_tools_json) {
+        return s_tools_json;
+    }
+    if (!s_tools_json_lock) {
+        return NULL;
+    }
+    if (xSemaphoreTake(s_tools_json_lock, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        return s_tools_json;
+    }
+    if (!s_tools_json) {
+        build_tools_json();
+    }
+    xSemaphoreGive(s_tools_json_lock);
     return s_tools_json;
 }
 

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "driver/i2s_types.h"
+#include "driver/spi_master.h"
+#include "esp_lcd_types.h"
+
 /* MimiClaw Global Configuration */
 
 /* Build-time secrets (highest priority, override NVS) */
@@ -79,6 +83,42 @@
 #ifndef MIMI_SECRET_TAVILY_KEY
 #define MIMI_SECRET_TAVILY_KEY      ""
 #endif
+#ifndef MIMI_SECRET_DISPLAY_THEME
+#define MIMI_SECRET_DISPLAY_THEME   ""
+#endif
+#ifndef MIMI_SECRET_DISPLAY_LOCALE
+#define MIMI_SECRET_DISPLAY_LOCALE  ""
+#endif
+#ifndef MIMI_SECRET_VOICE_APPID
+#define MIMI_SECRET_VOICE_APPID     ""
+#endif
+#ifndef MIMI_SECRET_VOICE_ACCESS_TOKEN
+#define MIMI_SECRET_VOICE_ACCESS_TOKEN ""
+#endif
+#ifndef MIMI_SECRET_VOICE_CLUSTER
+#define MIMI_SECRET_VOICE_CLUSTER   ""
+#endif
+#ifndef MIMI_SECRET_VOICE_WS_URL
+#define MIMI_SECRET_VOICE_WS_URL    ""
+#endif
+#ifndef MIMI_SECRET_VOICE_LANGUAGE
+#define MIMI_SECRET_VOICE_LANGUAGE  "zh-CN"
+#endif
+#ifndef MIMI_SECRET_VOICE_CONTINUOUS
+#define MIMI_SECRET_VOICE_CONTINUOUS  "0"
+#endif
+
+/* Board Profiles */
+#define MIMI_BOARD_PROFILE_CLASSIC              0
+#define MIMI_BOARD_PROFILE_S3_ST7735_VOICE      1
+
+#ifndef MIMI_BOARD_PROFILE
+#if CONFIG_IDF_TARGET_ESP32S3
+#define MIMI_BOARD_PROFILE MIMI_BOARD_PROFILE_S3_ST7735_VOICE
+#else
+#define MIMI_BOARD_PROFILE MIMI_BOARD_PROFILE_CLASSIC
+#endif
+#endif
 
 /* WiFi */
 #define MIMI_WIFI_MAX_RETRY          10
@@ -147,6 +187,101 @@
 #define MIMI_GPIO_CONFIG_SECTION     1   /* enable GPIO tools */
 #define MIMI_LED_DATA_GPIO           48  /* onboard RGB LED data pin (WS2812) */
 
+/* Display */
+#define MIMI_DISPLAY_BACKEND_NONE    0
+#define MIMI_DISPLAY_BACKEND_SSD1306 1
+#define MIMI_DISPLAY_BACKEND_SH1106  2
+#define MIMI_DISPLAY_BACKEND_ST7735  3
+
+#define MIMI_DISPLAY_THEME_DARK      0
+#define MIMI_DISPLAY_THEME_LIGHT     1
+
+#if MIMI_BOARD_PROFILE == MIMI_BOARD_PROFILE_S3_ST7735_VOICE
+#define MIMI_DISPLAY_BACKEND         MIMI_DISPLAY_BACKEND_ST7735
+#else
+#define MIMI_DISPLAY_BACKEND         MIMI_DISPLAY_BACKEND_NONE
+#endif
+
+#define MIMI_DISPLAY_ENABLED         (MIMI_DISPLAY_BACKEND != MIMI_DISPLAY_BACKEND_NONE)
+#define MIMI_DIAG_DISABLE_DISPLAY    0
+#define MIMI_DISPLAY_DEFAULT_THEME   "dark"
+#define MIMI_DISPLAY_DEFAULT_LOCALE  "zh-CN"
+#define MIMI_DISPLAY_LOCALE_DIR      MIMI_SPIFFS_BASE "/locales"
+#define MIMI_DISPLAY_TEXT_LIMIT      192
+#define MIMI_DISPLAY_TITLE_LIMIT     64
+#define MIMI_DISPLAY_STATUS_LIMIT    64
+#define MIMI_DISPLAY_ICON_LIMIT      32
+#define MIMI_DISPLAY_LOCALE_LIMIT    16
+#define MIMI_DISPLAY_VOICE_STATE_LIMIT 24
+
+/* Built-in font aliases for LVGL display HAL */
+#define BUILTIN_TEXT_FONT            font_noto_basic_14_1
+#define BUILTIN_ICON_FONT            font_awesome_14_1
+#define BUILTIN_LARGE_ICON_FONT      font_awesome_30_1
+
+/* OLED defaults kept for optional/manual backend override */
+#define MIMI_OLED_I2C_PORT           0
+#define MIMI_OLED_SDA_GPIO           -1
+#define MIMI_OLED_SCL_GPIO           -1
+#define MIMI_OLED_I2C_SPEED_HZ       400000
+#define MIMI_OLED_I2C_ADDR           0x3C
+#define MIMI_OLED_WIDTH              128
+#define MIMI_OLED_HEIGHT             32
+#define MIMI_OLED_MIRROR_X           0
+#define MIMI_OLED_MIRROR_Y           0
+
+/* ST7735 1.44" 128x128 board defaults */
+#define MIMI_ST7735_WIDTH            128
+#define MIMI_ST7735_HEIGHT           128
+#define MIMI_ST7735_SPI_HOST         SPI2_HOST
+#define MIMI_ST7735_MOSI_GPIO        41
+#define MIMI_ST7735_CLK_GPIO         42
+#define MIMI_ST7735_DC_GPIO          47
+#define MIMI_ST7735_CS_GPIO          36
+#define MIMI_ST7735_RST_GPIO         21
+#define MIMI_ST7735_BL_GPIO          45
+#define MIMI_ST7735_PCLK_HZ          (20 * 1000 * 1000)
+#define MIMI_ST7735_SPI_MODE         0
+#define MIMI_ST7735_RGB_ORDER        LCD_RGB_ELEMENT_ORDER_BGR
+#define MIMI_ST7735_INVERT_COLOR     1
+#define MIMI_ST7735_MIRROR_X         1
+#define MIMI_ST7735_MIRROR_Y         1
+#define MIMI_ST7735_SWAP_XY          0
+#define MIMI_ST7735_OFFSET_X         2
+#define MIMI_ST7735_OFFSET_Y         3
+#define MIMI_ST7735_BACKLIGHT_INVERT 0
+
+/* Button */
+#define MIMI_BUTTON_GPIO             0
+#define MIMI_BUTTON_ACTIVE_LEVEL     0
+#define MIMI_BUTTON_LONG_PRESS_MS    300
+
+/* Audio Input (INMP441) */
+#define MIMI_AUDIO_INPUT_I2S_PORT    I2S_NUM_0
+#define MIMI_AUDIO_INPUT_WS_GPIO     4
+#define MIMI_AUDIO_INPUT_SCK_GPIO    5
+#define MIMI_AUDIO_INPUT_SD_GPIO     6
+#define MIMI_AUDIO_INPUT_SAMPLE_RATE 16000
+#define MIMI_AUDIO_INPUT_BITS        16
+#define MIMI_AUDIO_INPUT_LEVEL_SAMPLES 160
+
+/* Audio Output (MAX98357) */
+#define MIMI_AUDIO_OUTPUT_I2S_PORT   I2S_NUM_1
+#define MIMI_AUDIO_OUTPUT_BCLK_GPIO  15
+#define MIMI_AUDIO_OUTPUT_LRCK_GPIO  16
+#define MIMI_AUDIO_OUTPUT_DOUT_GPIO  7
+#define MIMI_AUDIO_OUTPUT_SAMPLE_RATE 16000
+#define MIMI_AUDIO_OUTPUT_BITS       16
+
+/* Voice */
+#define MIMI_VOICE_DEFAULT_LANGUAGE  "zh-CN"
+#define MIMI_VOICE_DEFAULT_CLUSTER   ""
+#define MIMI_VOICE_DEFAULT_WS_URL    "wss://openspeech.bytedance.com/api/v3/realtime/dialogue"
+#define MIMI_VOICE_DEFAULT_CONTINUOUS_MODE 0
+#define MIMI_VOICE_DEFAULT_CHAT_ID   "default"
+#define MIMI_VOICE_MAX_TEXT          512
+#define MIMI_VOICE_WS_BUFFER         (8 * 1024)
+
 /* Skills */
 #define MIMI_SKILLS_PREFIX           MIMI_SPIFFS_BASE "/skills/"
 
@@ -165,6 +300,8 @@
 #define MIMI_NVS_LLM                 "llm_config"
 #define MIMI_NVS_PROXY               "proxy_config"
 #define MIMI_NVS_SEARCH              "search_config"
+#define MIMI_NVS_DISPLAY             "display_cfg"
+#define MIMI_NVS_VOICE               "voice_cfg"
 
 /* NVS Keys */
 #define MIMI_NVS_KEY_SSID            "ssid"
@@ -190,6 +327,14 @@
 #define MIMI_NVS_KEY_PROXY_HOST      "host"
 #define MIMI_NVS_KEY_PROXY_PORT      "port"
 #define MIMI_NVS_KEY_PROXY_TYPE      "proxy_type"
+#define MIMI_NVS_KEY_DISPLAY_THEME   "theme"
+#define MIMI_NVS_KEY_DISPLAY_LOCALE  "locale"
+#define MIMI_NVS_KEY_VOICE_APPID     "appid"
+#define MIMI_NVS_KEY_VOICE_TOKEN     "token"
+#define MIMI_NVS_KEY_VOICE_CLUSTER   "cluster"
+#define MIMI_NVS_KEY_VOICE_WS_URL    "ws_url"
+#define MIMI_NVS_KEY_VOICE_LANGUAGE  "language"
+#define MIMI_NVS_KEY_VOICE_CONT_MODE "cont_mode"
 
 /* WiFi Onboarding (Captive Portal) */
 #define MIMI_ONBOARD_AP_PREFIX    "MimiClaw-"

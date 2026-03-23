@@ -73,18 +73,47 @@ static void event_handler(void *arg, esp_event_base_t event_base,
 
 esp_err_t wifi_manager_init(void)
 {
+    ESP_LOGI(TAG, "wifi_manager_init: creating event group");
     s_wifi_event_group = xEventGroupCreate();
+    if (!s_wifi_event_group) {
+        ESP_LOGE(TAG, "wifi_manager_init: event group allocation failed");
+        return ESP_ERR_NO_MEM;
+    }
 
-    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_LOGI(TAG, "wifi_manager_init: esp_netif_init begin");
+    esp_err_t err = esp_netif_init();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_netif_init failed: %s", esp_err_to_name(err));
+        return err;
+    }
+    ESP_LOGI(TAG, "wifi_manager_init: esp_netif_init done");
+
+    ESP_LOGI(TAG, "wifi_manager_init: create_default_wifi_sta begin");
     esp_netif_create_default_wifi_sta();
+    ESP_LOGI(TAG, "wifi_manager_init: create_default_wifi_sta done");
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_LOGI(TAG, "wifi_manager_init: wifi task core=%d", cfg.wifi_task_core_id);
+    /*
+     * esp_wifi_init() can block for several seconds while the driver task boots.
+     * Yield once before entering that path so the idle tasks can feed TWDT after
+     * the earlier boot stages (SPIFFS, display, session store) have already used
+     * most of the initial watchdog window.
+     */
+    vTaskDelay(1);
+    ESP_LOGI(TAG, "wifi_manager_init: esp_wifi_init begin");
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_LOGI(TAG, "wifi_manager_init: esp_wifi_init done");
 
+    ESP_LOGI(TAG, "wifi_manager_init: register WIFI_EVENT handler begin");
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, NULL));
+    ESP_LOGI(TAG, "wifi_manager_init: register WIFI_EVENT handler done");
+
+    ESP_LOGI(TAG, "wifi_manager_init: register IP_EVENT handler begin");
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, NULL));
+    ESP_LOGI(TAG, "wifi_manager_init: register IP_EVENT handler done");
 
     ESP_LOGI(TAG, "WiFi manager initialized");
     return ESP_OK;
@@ -95,24 +124,26 @@ esp_err_t wifi_manager_start(void)
     wifi_config_t wifi_cfg = {0};
     bool found = false;
 
-    /* NVS overrides take highest priority (set via CLI) */
-    nvs_handle_t nvs;
-    if (nvs_open(MIMI_NVS_WIFI, NVS_READONLY, &nvs) == ESP_OK) {
-        size_t len = sizeof(wifi_cfg.sta.ssid);
-        if (nvs_get_str(nvs, MIMI_NVS_KEY_SSID, (char *)wifi_cfg.sta.ssid, &len) == ESP_OK) {
-            len = sizeof(wifi_cfg.sta.password);
-            nvs_get_str(nvs, MIMI_NVS_KEY_PASS, (char *)wifi_cfg.sta.password, &len);
-            found = true;
-        }
-        nvs_close(nvs);
-    }
-
-    /* Fall back to build-time secrets */
-    if (!found) {
-        if (MIMI_SECRET_WIFI_SSID[0] != '\0') {
-            strncpy((char *)wifi_cfg.sta.ssid, MIMI_SECRET_WIFI_SSID, sizeof(wifi_cfg.sta.ssid) - 1);
-            strncpy((char *)wifi_cfg.sta.password, MIMI_SECRET_WIFI_PASS, sizeof(wifi_cfg.sta.password) - 1);
-            found = true;
+    /*
+     * Build-time secrets are intended to be the highest-priority override for
+     * board bring-up. Keep NVS as the fallback so we can force a known SSID
+     * during diagnostics without wiping the user's saved config.
+     */
+    if (MIMI_SECRET_WIFI_SSID[0] != '\0') {
+        strncpy((char *)wifi_cfg.sta.ssid, MIMI_SECRET_WIFI_SSID, sizeof(wifi_cfg.sta.ssid) - 1);
+        strncpy((char *)wifi_cfg.sta.password, MIMI_SECRET_WIFI_PASS, sizeof(wifi_cfg.sta.password) - 1);
+        found = true;
+        ESP_LOGI(TAG, "Using build-time WiFi credentials");
+    } else {
+        nvs_handle_t nvs;
+        if (nvs_open(MIMI_NVS_WIFI, NVS_READONLY, &nvs) == ESP_OK) {
+            size_t len = sizeof(wifi_cfg.sta.ssid);
+            if (nvs_get_str(nvs, MIMI_NVS_KEY_SSID, (char *)wifi_cfg.sta.ssid, &len) == ESP_OK) {
+                len = sizeof(wifi_cfg.sta.password);
+                nvs_get_str(nvs, MIMI_NVS_KEY_PASS, (char *)wifi_cfg.sta.password, &len);
+                found = true;
+            }
+            nvs_close(nvs);
         }
     }
 
@@ -124,9 +155,17 @@ esp_err_t wifi_manager_start(void)
     s_reconnect_enabled = true;
     ESP_LOGI(TAG, "Connecting to SSID: %s", wifi_cfg.sta.ssid);
 
+    ESP_LOGI(TAG, "wifi_manager_start: esp_wifi_set_mode begin");
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_LOGI(TAG, "wifi_manager_start: esp_wifi_set_mode done");
+
+    ESP_LOGI(TAG, "wifi_manager_start: esp_wifi_set_config begin");
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
+    ESP_LOGI(TAG, "wifi_manager_start: esp_wifi_set_config done");
+
+    ESP_LOGI(TAG, "wifi_manager_start: esp_wifi_start begin");
     ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_LOGI(TAG, "wifi_manager_start: esp_wifi_start done");
 
     return ESP_OK;
 }

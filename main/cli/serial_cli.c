@@ -10,7 +10,12 @@
 #include "tools/tool_web_search.h"
 #include "cron/cron_service.h"
 #include "heartbeat/heartbeat.h"
+#include "hardware/audio_hal_input.h"
+#include "hardware/audio_hal_output.h"
+#include "hardware/button_service.h"
+#include "hardware/display_state.h"
 #include "skills/skill_loader.h"
+#include "voice/voice_channel.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -317,6 +322,221 @@ static int cmd_heap_info(int argc, char **argv)
     printf("Total free:    %d bytes\n",
            (int)esp_get_free_heap_size());
     return 0;
+}
+
+/* --- display_diag command --- */
+static int cmd_display_diag(int argc, char **argv)
+{
+    char info[512];
+    (void)argc;
+    (void)argv;
+
+    if (display_state_format_info(info, sizeof(info)) != ESP_OK) {
+        printf("Display unavailable.\n");
+        return 1;
+    }
+
+    printf("%s\n", info);
+    return 0;
+}
+
+/* --- display_show command --- */
+static struct {
+    struct arg_str *title;
+    struct arg_str *text;
+    struct arg_str *icon;
+    struct arg_int *duration_ms;
+    struct arg_end *end;
+} display_show_args;
+
+static int cmd_display_show(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **)&display_show_args);
+    esp_err_t err;
+    const char *title = NULL;
+    const char *icon = NULL;
+    int duration_ms = 0;
+
+    if (nerrors != 0) {
+        arg_print_errors(stderr, display_show_args.end, argv[0]);
+        return 1;
+    }
+
+    if (display_show_args.title->count > 0) {
+        title = display_show_args.title->sval[0];
+    }
+    if (display_show_args.icon->count > 0) {
+        icon = display_show_args.icon->sval[0];
+    }
+    if (display_show_args.duration_ms->count > 0) {
+        duration_ms = display_show_args.duration_ms->ival[0];
+    }
+
+    err = display_state_show(title, display_show_args.text->sval[0], icon, "system", duration_ms);
+    printf("display_show status: %s\n", esp_err_to_name(err));
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- display_theme command --- */
+static struct {
+    struct arg_str *theme;
+    struct arg_end *end;
+} display_theme_args;
+
+static int cmd_display_theme(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **)&display_theme_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, display_theme_args.end, argv[0]);
+        return 1;
+    }
+
+    if (display_theme_args.theme->count == 0) {
+        printf("Display theme: %s\n", display_state_get_theme_name());
+        return 0;
+    }
+
+    esp_err_t err = display_state_set_theme_name(display_theme_args.theme->sval[0]);
+    printf("display_theme status: %s\n", esp_err_to_name(err));
+    if (err == ESP_OK) {
+        printf("Display theme: %s\n", display_state_get_theme_name());
+    }
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- display_locale command --- */
+static struct {
+    struct arg_str *locale;
+    struct arg_end *end;
+} display_locale_args;
+
+static int cmd_display_locale(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **)&display_locale_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, display_locale_args.end, argv[0]);
+        return 1;
+    }
+
+    if (display_locale_args.locale->count == 0) {
+        printf("Display locale: %s\n", display_state_get_locale_name());
+        return 0;
+    }
+
+    esp_err_t err = display_state_set_locale_name(display_locale_args.locale->sval[0]);
+    printf("display_locale status: %s\n", esp_err_to_name(err));
+    if (err == ESP_OK) {
+        printf("Display locale: %s\n", display_state_get_locale_name());
+    }
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- button_test command --- */
+static int cmd_button_test(int argc, char **argv)
+{
+    char info[256];
+    (void)argc;
+    (void)argv;
+
+    if (button_service_format_info(info, sizeof(info)) != ESP_OK) {
+        printf("Button service unavailable.\n");
+        return 1;
+    }
+
+    printf("%s\n", info);
+    return 0;
+}
+
+/* --- mic_test_start command --- */
+static int cmd_mic_test_start(int argc, char **argv)
+{
+    esp_err_t err;
+    (void)argc;
+    (void)argv;
+
+    err = audio_hal_input_start_test();
+    printf("mic_test_start status: %s\n", esp_err_to_name(err));
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- mic_test_stop command --- */
+static int cmd_mic_test_stop(int argc, char **argv)
+{
+    esp_err_t err;
+    (void)argc;
+    (void)argv;
+
+    err = audio_hal_input_stop_test();
+    printf("mic_test_stop status: %s\n", esp_err_to_name(err));
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- mic_level command --- */
+static int cmd_mic_level(int argc, char **argv)
+{
+    char info[256];
+    (void)argc;
+    (void)argv;
+
+    if (audio_hal_input_format_info(info, sizeof(info)) != ESP_OK) {
+        printf("Mic info unavailable.\n");
+        return 1;
+    }
+
+    printf("%s\n", info);
+    return 0;
+}
+
+/* --- speaker_test command --- */
+static int cmd_speaker_test(int argc, char **argv)
+{
+    esp_err_t err;
+    (void)argc;
+    (void)argv;
+
+    err = audio_hal_output_play_test_tone(880, 700);
+    printf("speaker_test status: %s\n", esp_err_to_name(err));
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- voice_status command --- */
+static int cmd_voice_status(int argc, char **argv)
+{
+    char info[1024];
+    (void)argc;
+    (void)argv;
+
+    if (voice_channel_format_info(info, sizeof(info)) != ESP_OK) {
+        printf("Voice channel unavailable.\n");
+        return 1;
+    }
+
+    printf("%s\n", info);
+    return 0;
+}
+
+/* --- voice_connect_test command --- */
+static int cmd_voice_connect_test(int argc, char **argv)
+{
+    esp_err_t err;
+    (void)argc;
+    (void)argv;
+
+    err = voice_channel_connect_test(12000);
+    printf("voice_connect_test status: %s\n", esp_err_to_name(err));
+    return (err == ESP_OK) ? 0 : 1;
+}
+
+/* --- voice_reset command --- */
+static int cmd_voice_reset(int argc, char **argv)
+{
+    esp_err_t err;
+    (void)argc;
+    (void)argv;
+
+    err = voice_channel_reset();
+    printf("voice_reset status: %s\n", esp_err_to_name(err));
+    return (err == ESP_OK) ? 0 : 1;
 }
 
 /* --- set_proxy command --- */
@@ -652,6 +872,14 @@ static int cmd_config_show(int argc, char **argv)
     print_config_u16("Proxy Port", MIMI_NVS_PROXY, MIMI_NVS_KEY_PROXY_PORT, MIMI_SECRET_PROXY_PORT);
     print_config("Search Key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_API_KEY,  MIMI_SECRET_SEARCH_KEY, true);
     print_config("Tavily Key", MIMI_NVS_SEARCH, MIMI_NVS_KEY_TAVILY_KEY, MIMI_SECRET_TAVILY_KEY, true);
+    print_config("Disp Theme", MIMI_NVS_DISPLAY, MIMI_NVS_KEY_DISPLAY_THEME, MIMI_SECRET_DISPLAY_THEME, false);
+    print_config("Disp Locale", MIMI_NVS_DISPLAY, MIMI_NVS_KEY_DISPLAY_LOCALE, MIMI_SECRET_DISPLAY_LOCALE, false);
+    print_config("Voice AppID", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_APPID, MIMI_SECRET_VOICE_APPID, false);
+    print_config("Voice Token", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_TOKEN, MIMI_SECRET_VOICE_ACCESS_TOKEN, true);
+    print_config("Voice Cluster", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_CLUSTER, MIMI_SECRET_VOICE_CLUSTER, false);
+    print_config("Voice WS", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_WS_URL, MIMI_SECRET_VOICE_WS_URL, false);
+    print_config("Voice Lang", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_LANGUAGE, MIMI_SECRET_VOICE_LANGUAGE, false);
+    print_config("Voice Mode", MIMI_NVS_VOICE, MIMI_NVS_KEY_VOICE_CONT_MODE, MIMI_SECRET_VOICE_CONTINUOUS, false);
     printf("=============================\n");
     return 0;
 }
@@ -660,7 +888,8 @@ static int cmd_config_show(int argc, char **argv)
 static int cmd_config_reset(int argc, char **argv)
 {
     const char *namespaces[] = {
-        MIMI_NVS_WIFI, MIMI_NVS_FEISHU, MIMI_NVS_LLM, MIMI_NVS_PROXY, MIMI_NVS_SEARCH
+        MIMI_NVS_WIFI, MIMI_NVS_FEISHU, MIMI_NVS_LLM, MIMI_NVS_PROXY,
+        MIMI_NVS_SEARCH, MIMI_NVS_DISPLAY, MIMI_NVS_VOICE
     };
     for (size_t i = 0; i < (sizeof(namespaces) / sizeof(namespaces[0])); i++) {
         nvs_handle_t nvs;
@@ -1083,6 +1312,114 @@ esp_err_t serial_cli_init(void)
         .func = &cmd_heap_info,
     };
     esp_console_cmd_register(&heap_cmd);
+
+    /* display_diag */
+    esp_console_cmd_t display_diag_cmd = {
+        .command = "display_diag",
+        .help = "Show display backend/theme/locale diagnostics",
+        .func = &cmd_display_diag,
+    };
+    esp_console_cmd_register(&display_diag_cmd);
+
+    /* display_show */
+    display_show_args.title = arg_str0("t", "title", "<title>", "Optional title");
+    display_show_args.text = arg_str1(NULL, NULL, "<text>", "Main text to show");
+    display_show_args.icon = arg_str0("i", "icon", "<icon>", "Optional Font Awesome icon name");
+    display_show_args.duration_ms = arg_int0("d", "duration_ms", "<ms>", "Optional timeout in milliseconds");
+    display_show_args.end = arg_end(4);
+    esp_console_cmd_t display_show_cmd = {
+        .command = "display_show",
+        .help = "Show text on the display (e.g. display_show -t READY -i circle_check \"System online\")",
+        .func = &cmd_display_show,
+        .argtable = &display_show_args,
+    };
+    esp_console_cmd_register(&display_show_cmd);
+
+    /* display_theme */
+    display_theme_args.theme = arg_str0(NULL, NULL, "<theme>", "Optional theme name: dark or light");
+    display_theme_args.end = arg_end(1);
+    esp_console_cmd_t display_theme_cmd = {
+        .command = "display_theme",
+        .help = "Get or set display theme",
+        .func = &cmd_display_theme,
+        .argtable = &display_theme_args,
+    };
+    esp_console_cmd_register(&display_theme_cmd);
+
+    /* display_locale */
+    display_locale_args.locale = arg_str0(NULL, NULL, "<locale>", "Optional locale code like zh-CN or en-US");
+    display_locale_args.end = arg_end(1);
+    esp_console_cmd_t display_locale_cmd = {
+        .command = "display_locale",
+        .help = "Get or set display locale",
+        .func = &cmd_display_locale,
+        .argtable = &display_locale_args,
+    };
+    esp_console_cmd_register(&display_locale_cmd);
+
+    /* button_test */
+    esp_console_cmd_t button_test_cmd = {
+        .command = "button_test",
+        .help = "Show button service status and current interaction mode",
+        .func = &cmd_button_test,
+    };
+    esp_console_cmd_register(&button_test_cmd);
+
+    /* mic_test_start */
+    esp_console_cmd_t mic_test_start_cmd = {
+        .command = "mic_test_start",
+        .help = "Start background microphone capture test",
+        .func = &cmd_mic_test_start,
+    };
+    esp_console_cmd_register(&mic_test_start_cmd);
+
+    /* mic_test_stop */
+    esp_console_cmd_t mic_test_stop_cmd = {
+        .command = "mic_test_stop",
+        .help = "Stop background microphone capture test",
+        .func = &cmd_mic_test_stop,
+    };
+    esp_console_cmd_register(&mic_test_stop_cmd);
+
+    /* mic_level */
+    esp_console_cmd_t mic_level_cmd = {
+        .command = "mic_level",
+        .help = "Show current microphone level and capture diagnostics",
+        .func = &cmd_mic_level,
+    };
+    esp_console_cmd_register(&mic_level_cmd);
+
+    /* speaker_test */
+    esp_console_cmd_t speaker_test_cmd = {
+        .command = "speaker_test",
+        .help = "Play a short speaker test tone on MAX98357",
+        .func = &cmd_speaker_test,
+    };
+    esp_console_cmd_register(&speaker_test_cmd);
+
+    /* voice_status */
+    esp_console_cmd_t voice_status_cmd = {
+        .command = "voice_status",
+        .help = "Show voice channel websocket/session/speaker diagnostics",
+        .func = &cmd_voice_status,
+    };
+    esp_console_cmd_register(&voice_status_cmd);
+
+    /* voice_connect_test */
+    esp_console_cmd_t voice_connect_test_cmd = {
+        .command = "voice_connect_test",
+        .help = "Open the Doubao realtime voice websocket and wait for session start",
+        .func = &cmd_voice_connect_test,
+    };
+    esp_console_cmd_register(&voice_connect_test_cmd);
+
+    /* voice_reset */
+    esp_console_cmd_t voice_reset_cmd = {
+        .command = "voice_reset",
+        .help = "Reset voice websocket/session state and reload voice config",
+        .func = &cmd_voice_reset,
+    };
+    esp_console_cmd_register(&voice_reset_cmd);
 
     /* set_search_key */
     search_key_args.key = arg_str1(NULL, NULL, "<key>", "Brave Search API key");
